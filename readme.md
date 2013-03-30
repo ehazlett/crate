@@ -1,6 +1,6 @@
 # Crate
 Linux container management.  Crate uses [Fabric](http://fabfile.org) to manage
-remote hosts.  Currently tested on Ubuntu 12.04.  Similar to http://getdocker.io
+remote hosts.  Currently tested on Ubuntu 12.04.  Similar to the spectacular http://getdocker.io
 but written in Python and intended for remote hosts.
 
 # Setup
@@ -116,7 +116,7 @@ fab -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key forward_port
 Service available on host port 27802
 ```
 
-You can now access the container application via the host high port, i.e. 10.10.10.130:27802
+You can now access the container application via the host high port, i.e. `10.10.10.130:27802`
 
 ## List Ports
 
