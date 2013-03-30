@@ -6,7 +6,7 @@ but written in Python and intended for remote hosts.
 # Setup
 Using a virtualenv is preferred.
 
-* `pip install -r requirements.txt`
+`pip install -r requirements.txt`
 
 # Operations
 All operations are intended for remote hosts.  The remote host must also have
@@ -16,8 +16,7 @@ as `apt-get install lxc`.
 Crate will help in creating, destroying, exporting, port forwarding, etc. Linux
 containers.
 
-To see a list of operations run `fab -l`.  For detailed usage use `-d`.  For example,
-`fab -d create`.
+To see a list of operations run `crate -h`
 
 # Vagrant
 A [Vagrant](http://vagrantup.com) config is also provided for development
@@ -58,6 +57,7 @@ I: Retrieving Packages
 I: Validating Packages
 I: Resolving dependencies of required packages...
 I: Resolving dependencies of base packages...
+
 ...
 
 ##
@@ -78,6 +78,8 @@ This will create a default Fedora container.
 
 ```
 fab -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key create:testing-fedora,fedora
+
+...
 
 Download complete.
 Copy /var/cache/lxc/fedora/x86_64/14/rootfs to /var/lib/lxc/base-fedora/rootfs ...

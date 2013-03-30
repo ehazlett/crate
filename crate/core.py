@@ -22,7 +22,7 @@ def get_lxc_ip(name=None):
     return out
 
 @task
-def create(name=None, distro='ubuntu', release='', arch=''):
+def create(name=None, distro='ubuntu', release='', arch='', **kwargs):
     """
     Creates a new Container
 
@@ -42,21 +42,21 @@ def create(name=None, distro='ubuntu', release='', arch=''):
     sudo(cmd)
 
 @task
-def clone(source=None, dest=None, size=2):
+def clone(name=None, source=None, size=2, **kwargs):
     """
     Creates a new Container
 
+    :param name: Name of new container
     :param source: Name of source container
-    :param dest: Name of new container
     :param size: Size of new container (in GB, default: 2)
 
     """
-    if not source or not dest:
-        raise StandardError('You must specify a source and dest')
-    sudo('lxc-clone -o {0} -n {1} -s {2}G'.format(source, dest, size))
+    if not name or not source:
+        raise StandardError('You must specify a name and source')
+    sudo('lxc-clone -o {0} -n {1} -s {2}G'.format(source, name, size))
 
 @task
-def export_container(name=None):
+def export_container(name=None, **kwargs):
     """
     Exports (tarball) specified container
 
@@ -76,7 +76,7 @@ def export_container(name=None):
     sudo('rm -f {0}'.format(tmp_file))
 
 @task
-def import_container(name=None, local_path=None):
+def import_container(name=None, local_path=None, **kwargs):
     """
     Imports a container from an export
 
@@ -97,7 +97,7 @@ def import_container(name=None, local_path=None):
     print('Imported {0} successfully...'.format(name))
 
 @task
-def list():
+def list(**args):
     """
     List all Containers
 
@@ -105,7 +105,7 @@ def list():
     sudo('lxc-list')
 
 @task
-def start(name=None, ephemeral=False):
+def start(name=None, ephemeral=False, **kwargs):
     """
     Starts a Container
 
@@ -121,7 +121,7 @@ def start(name=None, ephemeral=False):
     sudo('nohup {0} -d > /dev/null 2>&1'.format(cmd))
 
 @task
-def console(name=None):
+def console(name=None, **kwargs):
     """
     Connects to Container console
 
@@ -133,7 +133,7 @@ def console(name=None):
     open_shell('sudo lxc-console -e b -n {0} ; exit'.format(name))
 
 @task
-def stop(name=None):
+def stop(name=None, **kwargs):
     """
     Stops a Container
 
@@ -145,7 +145,7 @@ def stop(name=None):
     sudo('lxc-stop -n {0}'.format(name))
 
 @task
-def destroy(name=None):
+def destroy(name=None, **kwargs):
     """
     Destroys a Container
 
@@ -157,31 +157,33 @@ def destroy(name=None):
     sudo('lxc-destroy -n {0} -f'.format(name))
 
 @task
-def forward_port(name=None, container_port=None):
+def forward_port(name=None, port=None, **kwargs):
     """
     Forwards a host port to a container port
 
     :param name: Name of container
-    :param container_port: Port on container
+    :param port: Port on container
 
     """
     # find open port on host
     while True:
-        port = random.randint(10000, 50000)
+        dport = random.randint(10000, 50000)
         out = sudo('netstat -lnt | awk \'$6 == "LISTEN" && $4 ~ ".{0}"\''.format(
-            port))
+            dport))
         if out == '':
             break
     # get ip of container
     container_ip = get_lxc_ip(name)
     with hide('stdout'):
         sudo('iptables -t nat -A PREROUTING -p tcp --dport {0} ' \
-            '-j DNAT --to-destination {1}:{2}'.format(port, container_ip,
-            container_port))
-    print('Service available on host port {0}'.format(port))
+            '-j DNAT --to-destination {1}:{2}'.format(dport, container_ip,
+            port))
+        # save rules
+        sudo('iptables-save > /etc/crate.iptables')
+    print('Service available on host port {0}'.format(dport))
 
 @task
-def list_ports(name=None):
+def list_ports(name=None, **kwargs):
     """
     Removes a container port forward
 
@@ -202,12 +204,12 @@ def list_ports(name=None):
         print('No port forwards for {0}'.format(name))
 
 @task
-def remove_port(name=None, container_port=None):
+def remove_port(name=None, port=None, **kwargs):
     """
     Removes a container port forward
 
     :param name: Name of container
-    :param container_port: Port on container
+    :param port: Port on container
 
     """
     # get ip of container
@@ -218,6 +220,8 @@ def remove_port(name=None, container_port=None):
         dport = cur.split()[-2].split(':')[1]
         sudo('iptables -t nat -D PREROUTING -p tcp --dport {0} ' \
             '-j DNAT --to-destination {1}:{2}'.format(dport, container_ip,
-            container_port), warn_only=True, quiet=True)
-        print('Port forward for {0} removed'.format(container_port))
+            port), warn_only=True, quiet=True)
+        # save rules
+        sudo('iptables-save > /etc/crate.iptables')
+        print('Forward for port {0} removed'.format(port))
 
