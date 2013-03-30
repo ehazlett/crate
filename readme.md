@@ -45,8 +45,19 @@ fab -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key create:testi
 
 debootstrap is /usr/sbin/debootstrap
 Checking cache download in /var/cache/lxc/precise/rootfs-amd64 ...
-Copy /var/cache/lxc/precise/rootfs-amd64 to /var/lib/lxc/testing/rootfs ...
-Copying rootfs to /var/lib/lxc/testing/rootfs ...
+installing packages: vim,ssh
+Downloading ubuntu precise minimal ...
+I: Retrieving Release
+I: Retrieving Release.gpg
+I: Checking Release signature
+I: Valid Release signature (key id 630239CC130E1A7FD81A27B140976EAF437D05B5)
+I: Retrieving Packages
+I: Validating Packages
+I: Retrieving Packages
+I: Validating Packages
+I: Resolving dependencies of required packages...
+I: Resolving dependencies of base packages...
+...
 
 ##
 # The default user is 'ubuntu' with password 'ubuntu'!
@@ -90,6 +101,12 @@ Updating rootfs...
 
 ```
 fab -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key start:testing
+```
+
+## Start Container (ephemeral)
+
+```
+fab -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key start:testing,ephemeral=true
 ```
 
 ## Access Console
