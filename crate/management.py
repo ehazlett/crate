@@ -22,7 +22,7 @@ def get_lxc_ip(name=None):
     return out
 
 @task
-def create(name=None, distro='ubuntu', release='precise', arch='amd64'):
+def create(name=None, distro='ubuntu', release='', arch=''):
     """
     Creates a new Container
 
@@ -34,8 +34,12 @@ def create(name=None, distro='ubuntu', release='precise', arch='amd64'):
     """
     if not name:
         raise StandardError('You must specify a name')
-    sudo('lxc-create -n {0} -t {1} -- -r {2} -a {3}'.format(
-        name, distro, release, arch))
+    cmd = 'lxc-create -n {0} -t {1}'.format(name, distro)
+    if release:
+        cmd += ' -- -r {0}'.format(release)
+    if arch:
+        cmd += ' -a {0}'.format(arch)
+    sudo(cmd)
 
 @task
 def clone(source=None, dest=None, size=2):

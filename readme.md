@@ -39,6 +39,7 @@ Note: I create an alias for testing to avoid typing the `fab -H 10.10.10.130...`
 every time.  I will leave it in the examples for clarity.
 
 ## Create Container
+This will create a default Ubuntu container.
 
 ```
 fab -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key create:testing,ubuntu,precise,amd64
@@ -71,6 +72,21 @@ I: Resolving dependencies of base packages...
 
 Note: the first time this runs it will take a while as it has to download
 packages.  After the first time it will be much faster as it will pull from cache.
+
+## Create Container (fedora)
+This will create a default Fedora container.
+
+```
+fab -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key create:testing-fedora,fedora
+
+Download complete.
+Copy /var/cache/lxc/fedora/x86_64/14/rootfs to /var/lib/lxc/base-fedora/rootfs ...
+Copying rootfs to /var/lib/lxc/base-fedora/rootfs ...setting root passwd to root
+installing fedora-release package
+container rootfs and config created
+'fedora' template installed
+'base-fedora' created
+```
 
 ## List Containers
 
@@ -119,6 +135,17 @@ Ubuntu 12.04.2 LTS testing tty1
 
 testing login:
 
+```
+
+This is the console for Fedora:
+
+```
+Type <Ctrl+b q> to exit the console
+
+Fedora release 14 (Laughlin)
+Kernel 3.2.0-38-virtual on an x86_64 (tty1)
+
+base-fedora login:
 ```
 
 Note: to disconnect, press `Ctrl+b, q`

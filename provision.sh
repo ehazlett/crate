@@ -2,7 +2,7 @@
 
 # update apt
 apt-get -y update 2>&1 > /dev/null
-apt-get -y install vim wget curl lxc
+apt-get -y install vim wget curl lxc yum
 
 IP=`hostname -I | awk '{ print $1; }'`
 
