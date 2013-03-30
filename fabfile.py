@@ -1,4 +1,4 @@
-from crate.management import *
+from crate.core import *
 import fabric.state
 from fabric.api import env
 
