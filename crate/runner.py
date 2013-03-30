@@ -28,7 +28,7 @@ def run(**kwargs):
         'start': core.start,
         'console': core.console,
         'stop': core.stop,
-        'delete': core.destroy,
+        'destroy': core.destroy,
         'clone': core.clone,
         'import': core.import_container,
         'export': core.export_container,
