@@ -29,7 +29,6 @@ For testing, after building the local vagrant VM you should see something like:
 
 ```
 Your vagrant box should be available at 10.10.10.130
-
 ```
 
 You can use the Vagrant IP as the remote host.  We will use the IP `10.10.10.130`
