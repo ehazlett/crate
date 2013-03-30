@@ -86,7 +86,7 @@ def import_container(name=None, local_path=None, **kwargs):
     """
     if not name or not os.path.exists(local_path):
         raise StandardError('You must specify a name and file must exist')
-    tmp_file = '/tmp/name.tar.gz'
+    tmp_file = '/tmp/{0}.tar.gz'.format(name)
     print('Uploading archive...')
     put(local_path, tmp_file)
     dest_path = os.path.join(LXC_PATH, name)
@@ -94,6 +94,24 @@ def import_container(name=None, local_path=None, **kwargs):
     print('Extracting...')
     with cd(dest_path), hide('stdout'):
         sudo('tar xzf {0} .'.format(tmp_file))
+        # fix names
+        config = run('cat {0}/config'.format(dest_path)).splitlines()
+        new_conf = []
+        utsname = None
+        for l in config:
+            if l.find('lxc.utsname') > -1:
+                utsname = l.split('=')[-1].strip()
+                l = 'lxc.utsname = {0}'.format(name)
+            if l.find('lxc.mount') > -1:
+                l = l.replace(utsname, name)
+            if l.find('lxc.rootfs') > -1:
+                l = l.replace(utsname, name)
+            new_conf.append(l)
+        with open('.tmpconf', 'w') as f:
+            f.write('\n'.join(new_conf))
+        put('.tmpconf', os.path.join(dest_path, 'config'), use_sudo=True)
+        os.remove('.tmpconf')
+    sudo('rm -f {0}'.format(tmp_file))
     print('Imported {0} successfully...'.format(name))
 
 @task
