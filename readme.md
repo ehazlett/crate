@@ -41,7 +41,7 @@ every time.  I will leave it in the examples for clarity.
 This will create a default Ubuntu container.
 
 ```
-crate -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key create:testing,ubuntu,precise,amd64
+crate -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key create --name testing --distro precise
 
 debootstrap is /usr/sbin/debootstrap
 Checking cache download in /var/cache/lxc/precise/rootfs-amd64 ...
@@ -77,7 +77,7 @@ packages.  After the first time it will be much faster as it will pull from cach
 This will create a default Fedora container.
 
 ```
-crate -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key create:testing-fedora,fedora
+crate -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key create --name testing-fedora --distro fedora
 
 ...
 
@@ -107,7 +107,7 @@ STOPPED
 ## Clone Container
 
 ```
-crate -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key clone:testing,testing2
+crate -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key clone --name testing2 --source testing
 
 Tweaking configuration
 Copying rootfs...
@@ -118,19 +118,19 @@ Updating rootfs...
 ## Start Container
 
 ```
-crate -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key start:testing
+crate -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key start --name testing
 ```
 
 ## Start Container (ephemeral)
 
 ```
-crate -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key start:testing,ephemeral=true
+crate -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key start --name testing --ephemeral
 ```
 
 ## Access Console
 
 ```
-crate -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key console:testing
+crate -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key console --name testing
 Type <Ctrl+b q> to exit the console
 
 Ubuntu 12.04.2 LTS testing tty1
@@ -157,7 +157,7 @@ This will select a random available port on the host and setup forwarding to the
 container port.
 
 ```
-crate -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key forward_port:testing,80
+crate -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key forward-port --name testing --port 80
 
 Service available on host port 27802
 ```
@@ -167,7 +167,7 @@ You can now access the container application via the host high port, i.e. `10.10
 ## List Ports
 
 ```
-crate -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key list_ports:testing
+crate -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key list-ports --name testing
 
 Port: 27802 Target: 80
 
@@ -176,7 +176,7 @@ Port: 27802 Target: 80
 ## Remove Port Forward
 
 ```
-crate -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key remove_port:testing,80
+crate -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key remove-port --name testing --port 80
 
 Port forward for 80 removed
 ```
@@ -184,13 +184,13 @@ Port forward for 80 removed
 ## Stop Container
 
 ```
-crate -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key stop:testing
+crate -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key stop --name testing
 ```
 
 ## Export Container
 
 ```
-crate -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key export_container:testing
+crate -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key export --name testing
 
 Creating archive...
 Downloading testing-2013-03-30.tar.gz ...
@@ -199,13 +199,13 @@ Downloading testing-2013-03-30.tar.gz ...
 ## Destroy Container
 
 ```
-crate -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key destroy:testing
+crate -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key destroy --name testing
 ```
 
 ## Import Container
 
 ```
-crate -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key import_container:testing,testing-2013-03-30.tar.gz
+crate -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key import --name testing --local-path testing-2013-03-30.tar.gz
 
 Uploading archive...
 Extracting...

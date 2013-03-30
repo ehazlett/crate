@@ -66,8 +66,8 @@ def main():
     create_parser.add_argument('--arch', action='store', default='',
         help='Container distro architecture')
 
-    delete_parser = subs.add_parser('delete', description='')
-    delete_parser.add_argument('-n', '--name', action='store',
+    destroy_parser = subs.add_parser('destroy', description='')
+    destroy_parser.add_argument('-n', '--name', action='store',
         help='Container name')
 
     start_parser = subs.add_parser('start', description='')
