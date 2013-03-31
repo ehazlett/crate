@@ -196,6 +196,9 @@ def forward_port(name=None, port=None, **kwargs):
         sudo('iptables -t nat -A PREROUTING -p tcp --dport {0} ' \
             '-j DNAT --to-destination {1}:{2}'.format(dport, container_ip,
             port))
+        sudo('iptables -t nat -A PREROUTING -p udp --dport {0} ' \
+            '-j DNAT --to-destination {1}:{2}'.format(dport, container_ip,
+            port))
         # save rules
         sudo('iptables-save > /etc/crate.iptables')
     print('Service available on host port {0}'.format(dport))
@@ -210,7 +213,8 @@ def list_ports(name=None, **kwargs):
     """
     # get ip of container
     container_ip = get_lxc_ip(name)
-    cur = sudo('iptables -L -t nat | grep {0}'.format(container_ip),
+    # only show tcp to prevent duplicates for udp
+    cur = sudo('iptables -L -t nat | grep {0} | grep tcp'.format(container_ip),
         warn_only=True, quiet=True)
     if cur:
         for l in cur.splitlines():
@@ -237,6 +241,9 @@ def remove_port(name=None, port=None, **kwargs):
     if cur:
         dport = cur.split()[-2].split(':')[1]
         sudo('iptables -t nat -D PREROUTING -p tcp --dport {0} ' \
+            '-j DNAT --to-destination {1}:{2}'.format(dport, container_ip,
+            port), warn_only=True, quiet=True)
+        sudo('iptables -t nat -D PREROUTING -p udp --dport {0} ' \
             '-j DNAT --to-destination {1}:{2}'.format(dport, container_ip,
             port), warn_only=True, quiet=True)
         # save rules
