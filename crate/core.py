@@ -250,3 +250,37 @@ def remove_port(name=None, port=None, **kwargs):
         sudo('iptables-save > /etc/crate.iptables')
         print('Forward for port {0} removed'.format(port))
 
+@task
+def set_memory_limit(name=None, memory=256, **kwargs):
+    """
+    Sets memory limit for a Container
+
+    :param name: Name of container
+    :param memory: Max memory for container
+
+    """
+    if not name:
+        raise StandardError('You must specify a name')
+    mem = (int(memory) * 1048576) # convert from MB to Bytes
+    print('Setting {0} memory limit to {1}MB'.format(name, memory))
+    with hide('stdout'):
+        sudo('lxc-cgroup -n {0} memory.limit_in_bytes {1}'.format(name, mem))
+
+@task
+def get_memory_limit(name=None, **kwargs):
+    """
+    Gets memory limit for a Container
+
+    :param name: Name of container
+
+    """
+    if not name:
+        raise StandardError('You must specify a name')
+    with hide('stdout'):
+        out = sudo('lxc-cgroup -n {0} memory.limit_in_bytes'.format(name))
+    mem = (int(out) / 1048576) # convert from bytes to MB
+    if mem > 1048576 * 1048576:
+        limit = 'Unlimited'
+    else:
+        limit = '{0}MB'.format(mem)
+    print('Memory limit for {0}: {1}'.format(name, limit))
