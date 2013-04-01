@@ -59,12 +59,14 @@ def main():
     create_parser = subs.add_parser('create', description='')
     create_parser.add_argument('-n', '--name', action='store',
         help='Container name')
-    create_parser.add_argument('--distro', action='store', default='',
-        help='Container distro name')
-    create_parser.add_argument('--release', action='store', default='',
+    create_parser.add_argument('-d', '--distro', action='store',
+        default='ubuntu-cloud', help='Container distro name')
+    create_parser.add_argument('-r', '--release', action='store', default='',
         help='Container distro release')
-    create_parser.add_argument('--arch', action='store', default='',
+    create_parser.add_argument('-a', '--arch', action='store', default='',
         help='Container distro architecture')
+    create_parser.add_argument('-f', '--user-data-file', action='store',
+        help='Path to user data file (ubuntu cloud images only)')
 
     destroy_parser = subs.add_parser('destroy', description='')
     destroy_parser.add_argument('-n', '--name', action='store',
