@@ -59,8 +59,8 @@ def main():
     create_parser = subs.add_parser('create', description='')
     create_parser.add_argument('-n', '--name', action='store',
         help='Container name')
-    create_parser.add_argument('--distro', action='store', default='',
-        help='Container distro name')
+    create_parser.add_argument('--distro', action='store',
+        default='ubuntu', help='Container distro name')
     create_parser.add_argument('--release', action='store', default='',
         help='Container distro release')
     create_parser.add_argument('--arch', action='store', default='',
