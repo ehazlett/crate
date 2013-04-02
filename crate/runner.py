@@ -35,6 +35,8 @@ def run(**kwargs):
         'forward-port': core.forward_port,
         'list-ports': core.list_ports,
         'remove-port': core.remove_port,
+        'set-memory-limit': core.set_memory_limit,
+        'get-memory-limit': core.get_memory_limit,
     }
     if cmd in commands:
         execute(commands[cmd], **kwargs)
@@ -121,6 +123,16 @@ def main():
         help='Container name')
     remove_port_parser.add_argument('-p', '--port', action='store',
         help='Container port')
+
+    get_memory_parser = subs.add_parser('get-memory-limit', description='')
+    get_memory_parser.add_argument('-n', '--name', action='store',
+        help='Container name')
+
+    set_memory_parser = subs.add_parser('set-memory-limit', description='')
+    set_memory_parser.add_argument('-n', '--name', action='store',
+        help='Container name')
+    set_memory_parser.add_argument('-m', '--memory', action='store',
+        help='Container memory limit (in MB)')
 
     args = parser.parse_args()
     # set log level

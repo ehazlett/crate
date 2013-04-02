@@ -152,6 +152,23 @@ base-fedora login:
 
 Note: to disconnect, press `Ctrl+b, q`
 
+## Container Memory Limits
+
+Get current limit (in MB):
+
+```
+crate -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key get-memory-limit -n testing
+
+Memory limit for testing: Unlimited
+```
+
+Set new limit (in MB):
+```
+crate -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key set-memory-limit -n testing -m 128
+
+Setting testing memory limit to 128MB
+```
+
 ## Port Forward
 This will select a random available port on the host and setup forwarding to the
 container port.
