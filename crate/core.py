@@ -153,7 +153,7 @@ def start(name=None, ephemeral=False, **kwargs):
     """
     if not name:
         raise StandardError('You must specify a name')
-    cmd = 'lxc-start -n {0}'.format(name)
+    cmd = 'lxc-start -n {0} -c /tmp/{0}.lxc.console'.format(name)
     if ephemeral:
         cmd = 'lxc-start-ephemeral -o {0}'.format(name)
     sudo('nohup {0} -d > /dev/null 2>&1'.format(cmd))
