@@ -29,8 +29,8 @@ def create(name=None, distro='ubuntu-cloud', release='', arch='',
     Creates a new Container
 
     :param name: Name of container
-    :param distro: Name of base distro
-    :param release: Name of base distro release (default: ubuntu-cloud)
+    :param distro: Name of base distro (default: ubuntu-cloud)
+    :param release: Name of base distro release
     :param arch: Architecture of container
     :param user_data_file: Path to user data file for cloud-init
         (ubuntu cloud images only)
@@ -53,10 +53,13 @@ def create(name=None, distro='ubuntu-cloud', release='', arch='',
         tmp_file = os.path.join('/tmp',
             ''.join(random.sample(string.letters, 5)))
         put(user_data_file, tmp_file)
+        # change ubuntu password since ubuntu-cloud has no password
+        # therefore console doesn't work
+        sudo(r"sed -i '2s/^/echo ubuntu:ubuntu | chpasswd \n/' {0}".format(tmp_file))
         cmd += ' -u {0}'.format(tmp_file)
     sudo(cmd)
-    #if tmp_file:
-    #    sudo('rm -f {0}'.format(tmp_file))
+    if tmp_file:
+        sudo('rm -f {0}'.format(tmp_file))
 
 @task
 def clone(name=None, source=None, size=2, **kwargs):
