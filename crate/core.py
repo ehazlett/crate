@@ -4,6 +4,7 @@ from datetime import date
 import os
 import tempfile
 import random
+import string
 
 # TODO: parse lxc config to get path
 LXC_PATH = '/var/lib/lxc'
@@ -22,24 +23,43 @@ def get_lxc_ip(name=None):
     return out
 
 @task
-def create(name=None, distro='ubuntu', release='', arch='', **kwargs):
+def create(name=None, distro='ubuntu-cloud', release='', arch='',
+    user_data_file=None, **kwargs):
     """
     Creates a new Container
 
     :param name: Name of container
-    :param distro: Name of base distro
+    :param distro: Name of base distro (default: ubuntu-cloud)
     :param release: Name of base distro release
     :param arch: Architecture of container
+    :param user_data_file: Path to user data file for cloud-init
+        (ubuntu cloud images only)
 
     """
     if not name:
         raise StandardError('You must specify a name')
     cmd = 'lxc-create -n {0} -t {1}'.format(name, distro)
-    if release:
-        cmd += ' -- -r {0}'.format(release)
     if arch:
         cmd += ' -a {0}'.format(arch)
+    # everything below is for template options
+    cmd += ' --'
+    if release:
+        cmd += ' -r {0}'.format(release)
+    tmp_file = None
+    if distro == 'ubuntu-cloud' and user_data_file:
+        if not os.path.exists(user_data_file):
+            raise StandardError('User data file must exist')
+        # create remote user data file for use with lxc-create
+        tmp_file = os.path.join('/tmp',
+            ''.join(random.sample(string.letters, 5)))
+        put(user_data_file, tmp_file)
+        # change ubuntu password since ubuntu-cloud has no password
+        # therefore console doesn't work
+        sudo(r"sed -i '2s/^/echo ubuntu:ubuntu | chpasswd \n/' {0}".format(tmp_file))
+        cmd += ' -u {0}'.format(tmp_file)
     sudo(cmd)
+    if tmp_file:
+        sudo('rm -f {0}'.format(tmp_file))
 
 @task
 def clone(name=None, source=None, size=2, **kwargs):
@@ -133,7 +153,7 @@ def start(name=None, ephemeral=False, **kwargs):
     """
     if not name:
         raise StandardError('You must specify a name')
-    cmd = 'lxc-start -n {0}'.format(name)
+    cmd = 'lxc-start -n {0} -c /tmp/{0}.lxc.console'.format(name)
     if ephemeral:
         cmd = 'lxc-start-ephemeral -o {0}'.format(name)
     sudo('nohup {0} -d > /dev/null 2>&1'.format(cmd))
