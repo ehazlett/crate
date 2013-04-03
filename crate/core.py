@@ -304,3 +304,35 @@ def get_memory_limit(name=None, **kwargs):
     else:
         limit = '{0}MB'.format(mem)
     print('Memory limit for {0}: {1}'.format(name, limit))
+
+@task
+def set_cpu_limit(name=None, percent=100, **kwargs):
+    """
+    Sets cpu limit for a Container
+
+    :param name: Name of container
+    :param percent: CPU priority in percent
+
+    """
+    if not name:
+        raise StandardError('You must specify a name')
+    print('Setting {0} CPU ratio to {1}%'.format(name, percent))
+    # default cpu shares value is 1024
+    ratio = int(1024 * (float(percent) / float(100)))
+    with hide('stdout'):
+        sudo('lxc-cgroup -n {0} cpu.shares {1}'.format(name, ratio))
+
+@task
+def get_cpu_limit(name=None, **kwargs):
+    """
+    Gets CPU limit for a Container
+
+    :param name: Name of container
+
+    """
+    if not name:
+        raise StandardError('You must specify a name')
+    with hide('stdout'):
+        out = sudo('lxc-cgroup -n {0} cpu.shares'.format(name))
+    limit = int((float(int(out)) / float(1024)) * 100)  # convert to percent
+    print('CPU limit for {0}: {1}%'.format(name, limit))

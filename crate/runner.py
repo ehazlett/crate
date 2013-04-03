@@ -37,6 +37,8 @@ def run(**kwargs):
         'remove-port': core.remove_port,
         'set-memory-limit': core.set_memory_limit,
         'get-memory-limit': core.get_memory_limit,
+        'set-cpu-limit': core.set_cpu_limit,
+        'get-cpu-limit': core.get_cpu_limit,
     }
     if cmd in commands:
         execute(commands[cmd], **kwargs)
@@ -135,6 +137,16 @@ def main():
         help='Container name')
     set_memory_parser.add_argument('-m', '--memory', action='store',
         help='Container memory limit (in MB)')
+
+    get_cpu_parser = subs.add_parser('get-cpu-limit', description='')
+    get_cpu_parser.add_argument('-n', '--name', action='store',
+        help='Container name')
+
+    set_cpu_parser = subs.add_parser('set-cpu-limit', description='')
+    set_cpu_parser.add_argument('-n', '--name', action='store',
+        help='Container name')
+    set_cpu_parser.add_argument('-p', '--percent', action='store',
+        help='Container CPU limit (in percent)')
 
     args = parser.parse_args()
     # set log level
