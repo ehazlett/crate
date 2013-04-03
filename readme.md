@@ -152,6 +152,23 @@ base-fedora login:
 
 Note: to disconnect, press `Ctrl+b, q`
 
+## Container CPU Limits
+
+Get current limit (in percent):
+
+```
+crate -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key get-cpu-limit -n testing
+
+CPU limit for testing: 100%
+```
+
+Set new limit (in percent):
+```
+crate -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key set-cpu-limit -n testing -p 50
+
+Setting testing CPU ratio to 50%
+```
+
 ## Container Memory Limits
 
 Get current limit (in MB):
