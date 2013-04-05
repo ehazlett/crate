@@ -13,6 +13,7 @@ fabric.state.output['running'] = False
 env.output_prefix = False
 # set logging levels
 logging.getLogger('paramiko').setLevel(logging.ERROR)
+logging.getLogger('ssh').setLevel(logging.ERROR)
 
 def run(**kwargs):
     cmd = kwargs.get('command')
