@@ -1,3 +1,1 @@
-import uwsgi
-import nginx
-import solr
+import uwsgi, nginx, solr, sentry

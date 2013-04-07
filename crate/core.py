@@ -13,6 +13,7 @@ LXC_IP_LINK = 'https://gist.github.com/ehazlett/5274446/raw/070f8a77f7f5738ee2d8
 
 CONTAINERS = {
     'nginx': containers.nginx.get_script,
+    'sentry': containers.sentry.get_script,
     'solr': containers.solr.get_script,
     'uwsgi': containers.uwsgi.get_script,
 }
