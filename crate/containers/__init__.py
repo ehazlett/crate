@@ -1,1 +1,1 @@
-import apache2, mongodb, nginx, solr, sentry, redis, uwsgi
+import apache2, graphite, mongodb, nginx, solr, sentry, redis, uwsgi

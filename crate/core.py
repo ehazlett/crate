@@ -13,6 +13,7 @@ LXC_IP_LINK = 'https://gist.github.com/ehazlett/5274446/raw/070f8a77f7f5738ee2d8
 
 CONTAINERS = {
     'apache2': containers.apache2.get_script,
+    'graphite': containers.graphite.get_script,
     'mongodb': containers.mongodb.get_script,
     'nginx': containers.nginx.get_script,
     'redis': containers.redis.get_script,
