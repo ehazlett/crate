@@ -16,6 +16,7 @@ CONTAINERS = {
     'graphite': containers.graphite.get_script,
     'memcached': containers.memcached.get_script,
     'mongodb': containers.mongodb.get_script,
+    'mysql': containers.mysql.get_script,
     'nginx': containers.nginx.get_script,
     'redis': containers.redis.get_script,
     'sentry': containers.sentry.get_script,
