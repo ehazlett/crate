@@ -5,10 +5,17 @@ import os
 import tempfile
 import random
 import string
+import containers
 
 # TODO: parse lxc config to get path
 LXC_PATH = '/var/lib/lxc'
 LXC_IP_LINK = 'https://gist.github.com/ehazlett/5274446/raw/070f8a77f7f5738ee2d855a1b94e2e9a23d770c6/gistfile1.txt'
+
+CONTAINERS = {
+    'nginx': containers.nginx.get_script,
+    'solr': containers.solr.get_script,
+    'uwsgi': containers.uwsgi.get_script,
+}
 
 def get_lxc_ip(name=None):
     # get lxc-ip script if doesn't exist
@@ -24,7 +31,7 @@ def get_lxc_ip(name=None):
 
 @task
 def create(name=None, distro='ubuntu-cloud', release='', arch='',
-    user_data_file=None, **kwargs):
+    user_data_file=None, base_containers=None, **kwargs):
     """
     Creates a new Container
 
@@ -34,6 +41,7 @@ def create(name=None, distro='ubuntu-cloud', release='', arch='',
     :param arch: Architecture of container
     :param user_data_file: Path to user data file for cloud-init
         (ubuntu cloud images only)
+    :param base_containers: Base Containers (ignores user_data_file)
 
     """
     if not name:
@@ -46,10 +54,21 @@ def create(name=None, distro='ubuntu-cloud', release='', arch='',
     if release:
         cmd += ' -r {0}'.format(release)
     tmp_file = None
-    if distro == 'ubuntu-cloud' and user_data_file:
-        if not os.path.exists(user_data_file):
-            raise StandardError('User data file must exist')
-        # create remote user data file for use with lxc-create
+    if distro == 'ubuntu-cloud' and user_data_file or base_containers:
+        if base_containers:
+            for c in base_containers:
+                if c not in CONTAINERS.keys():
+                    raise StandardError('Unknown base container: {0}'.format(c))
+            print('Provisioning with base containers: {0}'.format(
+                ','.join(base_containers)))
+            user_data_file = tempfile.mktemp()
+            with open(user_data_file, 'w') as f:
+                for c in base_containers:
+                    f.write(CONTAINERS[c]())
+        else:
+            if not os.path.exists(user_data_file):
+                raise StandardError('User data file must exist')
+            # create remote user data file for use with lxc-create
         tmp_file = os.path.join('/tmp',
             ''.join(random.sample(string.letters, 5)))
         put(user_data_file, tmp_file)

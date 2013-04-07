@@ -14,6 +14,11 @@ env.output_prefix = False
 # set logging levels
 logging.getLogger('paramiko').setLevel(logging.ERROR)
 
+def show_base_containers(**kwargs):
+    c = core.CONTAINERS.keys()
+    c.sort()
+    print('\n'.join(c))
+
 def run(**kwargs):
     cmd = kwargs.get('command')
     env.user = kwargs.get('user')
@@ -21,6 +26,7 @@ def run(**kwargs):
     # convert to list
     hosts = kwargs.get('hosts', '').split(',')
     kwargs['hosts'] = hosts
+    kwargs['base_containers'] = kwargs.get('base_containers','').split(',')
     # commands
     commands = {
         'create': core.create,
@@ -39,6 +45,7 @@ def run(**kwargs):
         'get-memory-limit': core.get_memory_limit,
         'set-cpu-limit': core.set_cpu_limit,
         'get-cpu-limit': core.get_cpu_limit,
+        'list-base-containers': show_base_containers,
     }
     if cmd in commands:
         execute(commands[cmd], **kwargs)
@@ -60,6 +67,12 @@ def main():
     list_parser.add_argument('--all', action='store_true', default=True,
         help='Show all containers')
 
+    list_base_containers_parser = subs.add_parser('list-base-containers',
+        description='Show Base Containers')
+    list_base_containers_parser.add_argument('--all', action='store_true',
+        default=True, help='Show all base containers')
+
+
     create_parser = subs.add_parser('create', description='')
     create_parser.add_argument('-n', '--name', action='store',
         help='Container name')
@@ -71,6 +84,8 @@ def main():
         help='Container distro architecture')
     create_parser.add_argument('-f', '--user-data-file', action='store',
         help='Path to user data file (ubuntu cloud images only)')
+    create_parser.add_argument('-b', '--base-containers', action='store',
+        default='', help='Base containers (comma separated)')
 
     destroy_parser = subs.add_parser('destroy', description='')
     destroy_parser.add_argument('-n', '--name', action='store',
