@@ -12,6 +12,7 @@ LXC_PATH = '/var/lib/lxc'
 LXC_IP_LINK = 'https://gist.github.com/ehazlett/5274446/raw/070f8a77f7f5738ee2d855a1b94e2e9a23d770c6/gistfile1.txt'
 
 CONTAINERS = {
+    'mongodb': containers.mongodb.get_script,
     'nginx': containers.nginx.get_script,
     'redis': containers.redis.get_script,
     'sentry': containers.sentry.get_script,
