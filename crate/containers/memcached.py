@@ -5,7 +5,7 @@ import base
 
 def get_script():
     """
-    Returns the base cloud-init provisioning script for Nginx
+    Returns the base cloud-init provisioning script for Memcached
 
     """
     tmpl = base.get_script()
@@ -13,7 +13,7 @@ def get_script():
 install_core_packages
 install_puppet
 cd $MODULE_DIR
-puppet apply -e "include nginx" --modulepath modules
+puppet apply -e "include memcached" --modulepath modules
 
 """
     return tmpl

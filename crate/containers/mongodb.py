@@ -10,6 +10,8 @@ def get_script():
     """
     tmpl = base.get_script()
     tmpl += """
+install_core_packages
+install_puppet
 cd $MODULE_DIR
 puppet apply -e "include mongodb" --modulepath modules
 
