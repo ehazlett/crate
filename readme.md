@@ -28,7 +28,7 @@ Basically they are just shell scripts that are passed to the Ubuntu Cloud
 image as a cloud-init script.  This also makes the Ubuntu Cloud image a
 requirement.  Use the `-b` option when creating a container to specify
 one or more base containers to be provisioned in your instance.  You can also
-use `crate list-base-containers` to show available base containers.
+use `crate list-base-containers` to show the available bases.
 
 # Vagrant
 A [Vagrant](http://vagrantup.com) config is also provided for development
