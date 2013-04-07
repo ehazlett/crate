@@ -100,6 +100,12 @@ container rootfs and config created
 'base-fedora' created
 ```
 
+## Create Container from base containers
+
+```
+crate -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key create --name testing -b nginx,uwsgi
+```
+
 ## List Containers
 
 ```
