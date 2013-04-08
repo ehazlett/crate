@@ -6,6 +6,7 @@ import tempfile
 import random
 import string
 import containers
+import requests
 
 # TODO: parse lxc config to get path
 LXC_PATH = '/var/lib/lxc'
@@ -21,6 +22,7 @@ CONTAINERS = {
     'mysql': containers.mysql.get_script,
     'nginx': containers.nginx.get_script,
     'openresty': containers.openresty.get_script,
+    'postgres': containers.postgres.get_script,
     'puppetdb': containers.puppetdb.get_script,
     'puppetmaster': containers.puppetmaster.get_script,
     'puppetdashboard': containers.puppetdashboard.get_script,
@@ -80,7 +82,15 @@ def create(name=None, distro='ubuntu-cloud', release='', arch='',
                 for c in base_containers:
                     f.write(CONTAINERS[c]())
         else:
-            if not os.path.exists(user_data_file):
+            # check for remote file
+            if user_data_file.startswith('http'):
+                print('Provisioning with remote cloud-init file...')
+                tfile = tempfile.mktemp()
+                with open(tfile, 'w') as f:
+                    r = requests.get(user_data_file)
+                    f.write(r.content)
+                user_data_file = tfile
+            elif not os.path.exists(user_data_file):
                 raise StandardError('User data file must exist')
             # create remote user data file for use with lxc-create
         tmp_file = os.path.join('/tmp',

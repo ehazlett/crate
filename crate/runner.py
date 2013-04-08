@@ -27,7 +27,9 @@ def run(**kwargs):
     # convert to list
     hosts = kwargs.get('hosts', '').split(',')
     kwargs['hosts'] = hosts
-    kwargs['base_containers'] = kwargs.get('base_containers','').split(',')
+    cnt = kwargs.get('base_containers')
+    if cnt:
+        kwargs['base_containers'] = kwargs.get('base_containers','').split(',')
     # commands
     commands = {
         'create': core.create,
@@ -84,9 +86,9 @@ def main():
     create_parser.add_argument('-a', '--arch', action='store', default='',
         help='Container distro architecture')
     create_parser.add_argument('-f', '--user-data-file', action='store',
-        help='Path to user data file (ubuntu cloud images only)')
+        help='Path or URL to user data file (ubuntu cloud images only)')
     create_parser.add_argument('-b', '--base-containers', action='store',
-        default='', help='Base containers (comma separated)')
+        default=None, help='Base containers (comma separated)')
 
     destroy_parser = subs.add_parser('destroy', description='')
     destroy_parser.add_argument('-n', '--name', action='store',
