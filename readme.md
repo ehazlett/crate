@@ -3,6 +3,8 @@ Linux container management.  Crate uses [Fabric](http://cratefile.org) to manage
 remote hosts.  Currently tested on Ubuntu 12.04.  Similar to the spectacular http://docker.io
 but written in Python and intended for remote hosts.
 
+Crate is designed to be a wrapper around Linux containers and use the already existing lxc-tools.  For example, crate will use the existing methods for building images.  There are no "pre-built" images to download.  This is done for security purposes -- you build the containers you want.
+
 # Setup
 Using a virtualenv is preferred.
 
