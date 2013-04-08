@@ -1,6 +1,6 @@
 # Crate
 Linux container management.  Crate uses [Fabric](http://cratefile.org) to manage
-remote hosts.  Currently tested on Ubuntu 12.04.  Similar to the spectacular http://getdocker.io
+remote hosts.  Currently tested on Ubuntu 12.04.  Similar to the spectacular http://docker.io
 but written in Python and intended for remote hosts.
 
 # Setup
