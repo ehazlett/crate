@@ -12,7 +12,6 @@ def get_script():
     tmpl += """
 install_core_packages
 install_puppet
-install_packages "build-essential"
 cd $MODULE_DIR
 puppet apply -e "include openresty" --modulepath modules
 
