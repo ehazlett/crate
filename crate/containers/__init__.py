@@ -1,1 +1,1 @@
-import apache2, graphite, memcached, mongodb, mysql, nginx, solr, sentry, redis, uwsgi
+import apache2, core, graphite, memcached, mongodb, mysql, nginx, puppetdb, puppetdashboard, puppetmaster, solr, sentry, redis, uwsgi

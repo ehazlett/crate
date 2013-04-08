@@ -13,7 +13,7 @@ MODULE_DIR=/opt/puppet
 # core
 apt-get update
 
-function install_pkgs() {
+function install_packages() {
     DEBIAN_FRONTEND=noninteractive apt-get -y install $*
 }
 
@@ -24,12 +24,12 @@ function install_puppet() {
 
     apt-get update
 
-    install_pkgs puppet-common
+    install_packages puppet-common
     git clone https://github.com/arcus-io/puppet.git $MODULE_DIR
 }
 
 function install_core_packages() {
-    install_pkgs $CORE_PKGS
+    install_packages $CORE_PKGS
     easy_install pip
     pip install virtualenv
 }
