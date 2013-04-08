@@ -22,6 +22,7 @@ CONTAINERS = {
     'puppetdb': containers.puppetdb.get_script,
     'puppetmaster': containers.puppetmaster.get_script,
     'puppetdashboard': containers.puppetdashboard.get_script,
+    'rabbitmq': containers.rabbitmq.get_script,
     'redis': containers.redis.get_script,
     'sentry': containers.sentry.get_script,
     'solr': containers.solr.get_script,
