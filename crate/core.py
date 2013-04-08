@@ -15,6 +15,7 @@ CONTAINERS = {
     'apache2': containers.apache2.get_script,
     'core': containers.core.get_script,
     'graphite': containers.graphite.get_script,
+    'haproxy': containers.haproxy.get_script,
     'memcached': containers.memcached.get_script,
     'mongodb': containers.mongodb.get_script,
     'mysql': containers.mysql.get_script,
