@@ -20,6 +20,7 @@ CONTAINERS = {
     'mongodb': containers.mongodb.get_script,
     'mysql': containers.mysql.get_script,
     'nginx': containers.nginx.get_script,
+    'openresty': containers.openresty.get_script,
     'puppetdb': containers.puppetdb.get_script,
     'puppetmaster': containers.puppetmaster.get_script,
     'puppetdashboard': containers.puppetdashboard.get_script,
