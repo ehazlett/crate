@@ -7,10 +7,13 @@ import random
 import string
 import containers
 import requests
+import logging
 
 # TODO: parse lxc config to get path
 LXC_PATH = '/var/lib/lxc'
 LXC_IP_LINK = 'https://gist.github.com/ehazlett/5274446/raw/070f8a77f7f5738ee2d855a1b94e2e9a23d770c6/gistfile1.txt'
+
+log = logging.getLogger('core')
 
 CONTAINERS = {
     'apache2': containers.apache2.get_script,
@@ -47,7 +50,8 @@ def get_lxc_ip(name=None):
 
 @task
 def create(name=None, distro='ubuntu-cloud', release='', arch='',
-    user_data_file=None, base_containers=None, **kwargs):
+    user_data_file=None, base_containers=None, public_key=None,
+    password=None, **kwargs):
     """
     Creates a new Container
 
@@ -58,6 +62,8 @@ def create(name=None, distro='ubuntu-cloud', release='', arch='',
     :param user_data_file: Path to user data file for cloud-init
         (ubuntu cloud images only)
     :param base_containers: Base Containers (ignores user_data_file)
+    :param public_key: SSH public key for container
+    :param password: Password for 'ubuntu' user (ubuntu cloud init only)
 
     """
     if not name:
@@ -69,13 +75,13 @@ def create(name=None, distro='ubuntu-cloud', release='', arch='',
     cmd += ' --'
     if release:
         cmd += ' -r {0}'.format(release)
-    tmp_file = None
+    tmp_files = []
     if distro == 'ubuntu-cloud' and user_data_file or base_containers:
         if base_containers:
             for c in base_containers:
                 if c not in CONTAINERS.keys():
                     raise StandardError('Unknown base container: {0}'.format(c))
-            print('Provisioning with base container(s): {0}'.format(
+            log.info('Provisioning with base container(s): {0}'.format(
                 ', '.join(base_containers)))
             user_data_file = tempfile.mktemp()
             with open(user_data_file, 'w') as f:
@@ -84,7 +90,6 @@ def create(name=None, distro='ubuntu-cloud', release='', arch='',
         else:
             # check for remote file
             if user_data_file.startswith('http'):
-                print('Provisioning with remote cloud-init file...')
                 tfile = tempfile.mktemp()
                 with open(tfile, 'w') as f:
                     r = requests.get(user_data_file)
@@ -92,17 +97,56 @@ def create(name=None, distro='ubuntu-cloud', release='', arch='',
                 user_data_file = tfile
             elif not os.path.exists(user_data_file):
                 raise StandardError('User data file must exist')
-            # create remote user data file for use with lxc-create
+            log.debug('Provisioning with cloud-init file {0}'.format(
+                user_data_file))
+        # create remote user data file for use with lxc-create
         tmp_file = os.path.join('/tmp',
             ''.join(random.sample(string.letters, 5)))
         put(user_data_file, tmp_file)
+        tmp_files.append(tmp_file)
         # change ubuntu password since ubuntu-cloud has no password
         # therefore console doesn't work
-        sudo(r"sed -i '2s/^/echo ubuntu:ubuntu | chpasswd \n/' {0}".format(tmp_file))
+        if password:
+            sudo(r"sed -i '2s/^/echo ubuntu:{0} | chpasswd \n/' {1}".format(
+                password, tmp_file))
         cmd += ' -u {0}'.format(tmp_file)
-    sudo(cmd)
-    if tmp_file:
-        sudo('rm -f {0}'.format(tmp_file))
+    if password and distro == 'ubuntu-cloud' and not user_data_file:
+        log.debug('Using custom password...')
+        t = tempfile.mktemp()
+        with open(t, 'w') as f:
+            scr = '#!/bin/sh\necho ubuntu:{0} | chpasswd \n'.format(
+                password)
+            f.write(scr)
+        # create remote user data file for use with lxc-create to 
+        # change password
+        tmp_file = os.path.join('/tmp',
+            ''.join(random.sample(string.letters, 5)))
+        put(t, tmp_file)
+        os.remove(t)
+        tmp_files.append(tmp_file)
+        cmd += ' -u {0}'.format(tmp_file)
+    # check for public key
+    if public_key:
+        log.debug('Using custom SSH key...')
+        if public_key.startswith('http'):
+            tfile = tempfile.mktemp()
+            with open(tfile, 'w') as f:
+                r = requests.get(public_key)
+                f.write(r.content)
+            public_key = tfile
+        elif not os.path.exists(public_key):
+            raise StandardError('SSH public key file must exist')
+        # create remote user data file for use with lxc-create
+        tmp_file = os.path.join('/tmp',
+            ''.join(random.sample(string.letters, 5)))
+        put(public_key, tmp_file)
+        tmp_files.append(tmp_file)
+        cmd += ' -S {0}'.format(tmp_file)
+    with hide('stdout',):
+        sudo(cmd)
+    # cleanup
+    sudo('rm -rf {0}'.format(' '.join(tmp_files)))
+    log.info('{0} created'.format(name))
 
 @task
 def clone(name=None, source=None, size=2, **kwargs):
@@ -116,7 +160,9 @@ def clone(name=None, source=None, size=2, **kwargs):
     """
     if not name or not source:
         raise StandardError('You must specify a name and source')
-    sudo('lxc-clone -o {0} -n {1} -s {2}G'.format(source, name, size))
+    with hide('stdout',):
+        sudo('lxc-clone -o {0} -n {1} -s {2}G'.format(source, name, size))
+    log.info('{0} created'.format(name))
 
 @task
 def export_container(name=None, **kwargs):
@@ -131,10 +177,10 @@ def export_container(name=None, **kwargs):
     # TODO: parse config to get path
     export_name = '{0}-{1}.tar.gz'.format(name, date.today().isoformat())
     tmp_file = os.path.join('/tmp', export_name)
-    print('Creating archive...')
+    log.info('Creating archive...')
     with cd(os.path.join(LXC_PATH, name)), hide('stdout'):
         sudo('tar czf {0} .'.format(tmp_file))
-    print('Downloading {0} ...'.format(export_name))
+    log.info('Downloading {0} ...'.format(export_name))
     get(tmp_file, export_name)
     sudo('rm -f {0}'.format(tmp_file))
 
@@ -150,11 +196,11 @@ def import_container(name=None, local_path=None, **kwargs):
     if not name or not os.path.exists(local_path):
         raise StandardError('You must specify a name and file must exist')
     tmp_file = '/tmp/{0}.tar.gz'.format(name)
-    print('Uploading archive...')
+    log.info('Uploading archive...')
     put(local_path, tmp_file)
     dest_path = os.path.join(LXC_PATH, name)
     sudo('mkdir -p {0}'.format(dest_path))
-    print('Extracting...')
+    log.info('Extracting...')
     with cd(dest_path), hide('stdout'):
         sudo('tar xzf {0} .'.format(tmp_file))
         # fix names
@@ -175,7 +221,7 @@ def import_container(name=None, local_path=None, **kwargs):
         put('.tmpconf', os.path.join(dest_path, 'config'), use_sudo=True)
         os.remove('.tmpconf')
     sudo('rm -f {0}'.format(tmp_file))
-    print('Imported {0} successfully...'.format(name))
+    log.info('Imported {0} successfully...'.format(name))
 
 @task
 def list(**args):
@@ -199,7 +245,9 @@ def start(name=None, ephemeral=False, **kwargs):
     cmd = 'lxc-start -n {0} -c /tmp/{0}.lxc.console'.format(name)
     if ephemeral:
         cmd = 'lxc-start-ephemeral -o {0}'.format(name)
-    sudo('nohup {0} -d > /dev/null 2>&1'.format(cmd))
+    with hide('stdout',):
+        sudo('nohup {0} -d > /dev/null 2>&1'.format(cmd))
+    log.info('{0} started'.format(name))
 
 @task
 def console(name=None, **kwargs):
@@ -223,7 +271,9 @@ def stop(name=None, **kwargs):
     """
     if not name:
         raise StandardError('You must specify a name')
-    sudo('lxc-stop -n {0}'.format(name))
+    with hide('stdout',):
+        sudo('lxc-stop -n {0}'.format(name))
+    log.info('{0} stopped'.format(name))
 
 @task
 def destroy(name=None, **kwargs):
@@ -235,7 +285,9 @@ def destroy(name=None, **kwargs):
     """
     if not name:
         raise StandardError('You must specify a name')
-    sudo('lxc-destroy -n {0} -f'.format(name))
+    with hide('stdout',):
+        sudo('lxc-destroy -n {0} -f'.format(name))
+    log.info('{0} destroyed'.format(name))
 
 @task
 def forward_port(name=None, port=None, **kwargs):
@@ -264,7 +316,7 @@ def forward_port(name=None, port=None, **kwargs):
             port))
         # save rules
         sudo('iptables-save > /etc/crate.iptables')
-    print('Service available on host port {0}'.format(dport))
+    log.info('Service available on host port {0}'.format(dport))
 
 @task
 def list_ports(name=None, **kwargs):
@@ -284,9 +336,9 @@ def list_ports(name=None, **kwargs):
             if l:
                 dport = cur.split()[-2].split(':')[1]
                 target = cur.split()[-1].split(':')[-1]
-                print('Port: {0} Target: {1}'.format(dport, target))
+                log.info('Port: {0} Target: {1}'.format(dport, target))
     else:
-        print('No port forwards for {0}'.format(name))
+        log.info('No port forwards for {0}'.format(name))
 
 @task
 def remove_port(name=None, port=None, **kwargs):
@@ -311,7 +363,7 @@ def remove_port(name=None, port=None, **kwargs):
             port), warn_only=True, quiet=True)
         # save rules
         sudo('iptables-save > /etc/crate.iptables')
-        print('Forward for port {0} removed'.format(port))
+        log.info('Forward for port {0} removed'.format(port))
 
 @task
 def set_memory_limit(name=None, memory=256, **kwargs):
@@ -325,7 +377,7 @@ def set_memory_limit(name=None, memory=256, **kwargs):
     if not name:
         raise StandardError('You must specify a name')
     mem = (int(memory) * 1048576) # convert from MB to Bytes
-    print('Setting {0} memory limit to {1}MB'.format(name, memory))
+    log.info('Setting {0} memory limit to {1}MB'.format(name, memory))
     with hide('stdout'):
         sudo('lxc-cgroup -n {0} memory.limit_in_bytes {1}'.format(name, mem))
 
@@ -346,7 +398,7 @@ def get_memory_limit(name=None, **kwargs):
         limit = 'Unlimited'
     else:
         limit = '{0}MB'.format(mem)
-    print('Memory limit for {0}: {1}'.format(name, limit))
+    log.info('Memory limit for {0}: {1}'.format(name, limit))
 
 @task
 def set_cpu_limit(name=None, percent=100, **kwargs):
@@ -359,7 +411,7 @@ def set_cpu_limit(name=None, percent=100, **kwargs):
     """
     if not name:
         raise StandardError('You must specify a name')
-    print('Setting {0} CPU ratio to {1}%'.format(name, percent))
+    log.info('Setting {0} CPU ratio to {1}%'.format(name, percent))
     # default cpu shares value is 1024
     ratio = int(1024 * (float(percent) / float(100)))
     with hide('stdout'):
@@ -378,4 +430,4 @@ def get_cpu_limit(name=None, **kwargs):
     with hide('stdout'):
         out = sudo('lxc-cgroup -n {0} cpu.shares'.format(name))
     limit = int((float(int(out)) / float(1024)) * 100)  # convert to percent
-    print('CPU limit for {0}: {1}%'.format(name, limit))
+    log.info('CPU limit for {0}: {1}%'.format(name, limit))

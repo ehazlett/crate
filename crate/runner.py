@@ -89,6 +89,10 @@ def main():
         help='Path or URL to user data file (ubuntu cloud images only)')
     create_parser.add_argument('-b', '--base-containers', action='store',
         default=None, help='Base containers (comma separated)')
+    create_parser.add_argument('-s', '--public-key', action='store',
+        help='Path or URL to SSH public key (ubuntu cloud images only)')
+    create_parser.add_argument('-p', '--password', action='store',
+        help='Ubuntu user password (ubuntu cloud init images only)')
 
     destroy_parser = subs.add_parser('destroy', description='')
     destroy_parser.add_argument('-n', '--name', action='store',
@@ -173,7 +177,7 @@ def main():
     else:
         level = logging.INFO
     logging.basicConfig(level=level,
-        format='%(asctime)s %(levelname)s: %(message)s')
+        format='%(levelname)s: %(message)s')
     logging.getLogger('requests').setLevel(logging.ERROR)
     # main
     if not args.command:
