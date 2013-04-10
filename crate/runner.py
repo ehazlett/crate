@@ -15,12 +15,14 @@ env.output_prefix = False
 logging.getLogger('paramiko').setLevel(logging.ERROR)
 logging.getLogger('ssh').setLevel(logging.ERROR)
 
+
 def show_base_containers(**kwargs):
     c = core.CONTAINERS.keys()
     c.sort()
     print('\n'.join(c))
 
 def run(**kwargs):
+    log = logging.getLogger('core')
     cmd = kwargs.get('command')
     env.user = kwargs.get('user')
     env.key_filename = kwargs.get('key_filename')
@@ -28,6 +30,12 @@ def run(**kwargs):
     hosts = kwargs.get('hosts', '').split(',')
     kwargs['hosts'] = hosts
     cnt = kwargs.get('base_containers')
+    ssh_key = kwargs.get('public_key')
+    password = kwargs.get('password')
+    if cmd == 'create':
+        if not ssh_key and not password:
+            log.error('You must specify an SSH public key or password')
+            sys.exit(1)
     if cnt:
         kwargs['base_containers'] = kwargs.get('base_containers','').split(',')
     # commands
@@ -92,6 +100,7 @@ def main():
     create_parser.add_argument('-s', '--public-key', action='store',
         help='Path or URL to SSH public key (ubuntu cloud images only)')
     create_parser.add_argument('-p', '--password', action='store',
+        default=None,
         help='Ubuntu user password (ubuntu cloud init images only)')
 
     destroy_parser = subs.add_parser('destroy', description='')
@@ -177,7 +186,7 @@ def main():
     else:
         level = logging.INFO
     logging.basicConfig(level=level,
-        format='%(levelname)s: %(message)s')
+        format='%(levelname)-10s %(message)s')
     logging.getLogger('requests').setLevel(logging.ERROR)
     # main
     if not args.command:

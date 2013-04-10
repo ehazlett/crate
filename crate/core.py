@@ -69,6 +69,8 @@ def create(name=None, distro='ubuntu-cloud', release='', arch='',
     """
     if not name:
         raise StandardError('You must specify a name')
+    log.debug('Creating container {0}: Distro: {1} Version: {2}'.format(name,
+        distro or 'default', release or 'default'))
     cmd = 'lxc-create -n {0} -t {1}'.format(name, distro)
     if arch:
         cmd += ' -a {0}'.format(arch)
@@ -108,11 +110,12 @@ def create(name=None, distro='ubuntu-cloud', release='', arch='',
         # change ubuntu password since ubuntu-cloud has no password
         # therefore console doesn't work
         if password:
+            log.debug('Setting password...')
             sudo(r"sed -i '2s/^/echo ubuntu:{0} | chpasswd \n/' {1}".format(
                 password, tmp_file))
         cmd += ' -u {0}'.format(tmp_file)
     if password and distro == 'ubuntu-cloud' and not user_data_file:
-        log.debug('Using custom password...')
+        log.debug('Setting password...')
         t = tempfile.mktemp()
         with open(t, 'w') as f:
             scr = '#!/bin/sh\necho ubuntu:{0} | chpasswd \n'.format(
