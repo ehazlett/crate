@@ -22,7 +22,7 @@ def show_base_containers(**kwargs):
     print('\n'.join(c))
 
 def run(**kwargs):
-    log = logging.getLogger('core')
+    log = logging.getLogger('main')
     cmd = kwargs.get('command')
     env.user = kwargs.get('user')
     env.key_filename = kwargs.get('key_filename')
@@ -62,6 +62,7 @@ def run(**kwargs):
         execute(commands[cmd], **kwargs)
 
 def main():
+    log = logging.getLogger('main')
     parser = ArgumentParser('crate')
     parser.add_argument('-H', '--hosts', dest='hosts', required=True,
         default='127.0.0.1', help='Hosts (comma separated)')
@@ -192,7 +193,11 @@ def main():
     if not args.command:
         parser.print_help()
     else:
-        run(**args.__dict__)
+        try:
+            run(**args.__dict__)
+        except Exception, e:
+            log.error(e)
+            sys.exit(1)
 
 if __name__=='__main__':
     main()

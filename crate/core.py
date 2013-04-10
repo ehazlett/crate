@@ -33,6 +33,7 @@ CONTAINERS = {
     'rabbitmq': containers.rabbitmq.get_script,
     'redis': containers.redis.get_script,
     'sentry': containers.sentry.get_script,
+    'sensu': containers.sensu.get_script,
     'solr': containers.solr.get_script,
     'uwsgi': containers.uwsgi.get_script,
 }
