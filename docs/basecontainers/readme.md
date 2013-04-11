@@ -8,6 +8,16 @@ requirement.  Use the `-b` option when creating a container to specify
 one or more base containers to be provisioned in your instance.  You can also
 use `crate list-base-containers` to show the available bases.
 
+# Usage
+
+To provision an instance using container(s):
+
+`crate create --name sandbox --base-containers nginx`
+
+or using multiple containers:
+
+`crate create --name sandbox --base-containers nginx,redis`
+
 # Builtin Containers
 
 * [Apache2](./apache2.md)
