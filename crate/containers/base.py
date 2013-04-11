@@ -7,7 +7,7 @@ def get_script():
 
     """
     tmpl = """#!/bin/bash
-CORE_PKGS="wget curl python-dev python-setuptools libxml2-dev libxslt-dev vim git-core unzip"
+CORE_PKGS="wget curl collectd ntp python-dev python-setuptools libxml2-dev libxslt-dev vim git-core unzip"
 MODULE_DIR=/opt/puppet
 
 # core

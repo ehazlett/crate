@@ -14,10 +14,11 @@ Note: I create an alias for testing to avoid typing the `crate -H 10.10.10.130..
 every time.  I will leave it in the examples for clarity.
 
 ## Create Container
-This will create a default Ubuntu container.
+This will create a default Ubuntu container.  You will need to either specify
+a password `--password` or SSH public key `-s` to login to the Ubuntu containers.
 
 ```
-crate -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key create --name testing --distro precise
+crate -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key create --name testing --distro precise --password ubuntu
 
 debootstrap is /usr/sbin/debootstrap
 Checking cache download in /var/cache/lxc/precise/rootfs-amd64 ...
@@ -53,7 +54,7 @@ packages.  After the first time it will be much faster as it will pull from cach
 This will create a default Fedora container.
 
 ```
-crate -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key create --name testing-fedora --distro fedora
+crate -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key create --name testing-fedora --distro fedora --password ubuntu
 
 ...
 
@@ -69,7 +70,19 @@ container rootfs and config created
 ## Create Container from base containers
 
 ```
-crate -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key create --name testing -b nginx,uwsgi
+crate -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key create --name testing -b nginx,uwsgi --password ubuntu
+```
+
+## Create Container and provision with custom user data script (shell)
+
+```
+crate -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key create --name testing --password ubuntu -f /path/to/script.sh
+```
+
+or via remote script:
+
+```
+crate -H 10.10.10.130 -u vagrant -i ~/.vagrant.d/insecure_private_key create --name testing --password ubuntu -f http://gist.github.com/user/gistfile.sh
 ```
 
 ## List Containers

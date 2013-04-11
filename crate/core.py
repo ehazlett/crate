@@ -70,6 +70,7 @@ def create(name=None, distro='ubuntu-cloud', release='', arch='',
     """
     if not name:
         raise StandardError('You must specify a name')
+    log.info('Creating {0}'.format(name))
     log.debug('Creating container {0}: Distro: {1} Version: {2}'.format(name,
         distro or 'default', release or 'default'))
     cmd = 'lxc-create -n {0} -t {1}'.format(name, distro)
@@ -165,6 +166,7 @@ def clone(name=None, source=None, size=2, **kwargs):
     """
     if not name or not source:
         raise StandardError('You must specify a name and source')
+    log.info('Cloning {0} to {1}'.format(source, name))
     with hide('stdout',):
         sudo('lxc-clone -o {0} -n {1} -s {2}G'.format(source, name, size))
     log.info('{0} created'.format(name))
