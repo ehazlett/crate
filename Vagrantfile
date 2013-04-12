@@ -3,7 +3,7 @@
 
 Vagrant.configure("2") do |config|
   config.vm.box = "precise64"
-  config.vm.provision :shell, :path => "provision.sh"
+  config.vm.provision :shell, :path => "vagrant_provision.sh"
   config.vm.hostname = "crate"
   config.vm.network :public_network
   config.vm.provider :vmware_fusion do |v|

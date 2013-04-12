@@ -15,13 +15,29 @@ env.output_prefix = False
 logging.getLogger('paramiko').setLevel(logging.ERROR)
 logging.getLogger('ssh').setLevel(logging.ERROR)
 
+
+def show_base_containers(**kwargs):
+    c = core.CONTAINERS.keys()
+    c.sort()
+    print('\n'.join(c))
+
 def run(**kwargs):
+    log = logging.getLogger('main')
     cmd = kwargs.get('command')
     env.user = kwargs.get('user')
     env.key_filename = kwargs.get('key_filename')
     # convert to list
     hosts = kwargs.get('hosts', '').split(',')
     kwargs['hosts'] = hosts
+    cnt = kwargs.get('base_containers')
+    ssh_key = kwargs.get('public_key')
+    password = kwargs.get('password')
+    if cmd == 'create':
+        if not ssh_key and not password:
+            log.error('You must specify an SSH public key or password')
+            sys.exit(1)
+    if cnt:
+        kwargs['base_containers'] = kwargs.get('base_containers','').split(',')
     # commands
     commands = {
         'create': core.create,
@@ -40,11 +56,13 @@ def run(**kwargs):
         'get-memory-limit': core.get_memory_limit,
         'set-cpu-limit': core.set_cpu_limit,
         'get-cpu-limit': core.get_cpu_limit,
+        'list-base-containers': show_base_containers,
     }
     if cmd in commands:
         execute(commands[cmd], **kwargs)
 
 def main():
+    log = logging.getLogger('main')
     parser = ArgumentParser('crate')
     parser.add_argument('-H', '--hosts', dest='hosts', required=True,
         default='127.0.0.1', help='Hosts (comma separated)')
@@ -61,6 +79,12 @@ def main():
     list_parser.add_argument('--all', action='store_true', default=True,
         help='Show all containers')
 
+    list_base_containers_parser = subs.add_parser('list-base-containers',
+        description='Show Base Containers')
+    list_base_containers_parser.add_argument('--all', action='store_true',
+        default=True, help='Show all base containers')
+
+
     create_parser = subs.add_parser('create', description='')
     create_parser.add_argument('-n', '--name', action='store',
         help='Container name')
@@ -71,7 +95,14 @@ def main():
     create_parser.add_argument('-a', '--arch', action='store', default='',
         help='Container distro architecture')
     create_parser.add_argument('-f', '--user-data-file', action='store',
-        help='Path to user data file (ubuntu cloud images only)')
+        help='Path or URL to user data file (ubuntu cloud images only)')
+    create_parser.add_argument('-b', '--base-containers', action='store',
+        default=None, help='Base containers (comma separated)')
+    create_parser.add_argument('-s', '--public-key', action='store',
+        help='Path or URL to SSH public key (ubuntu cloud images only)')
+    create_parser.add_argument('-p', '--password', action='store',
+        default=None,
+        help='Ubuntu user password (ubuntu cloud init images only)')
 
     destroy_parser = subs.add_parser('destroy', description='')
     destroy_parser.add_argument('-n', '--name', action='store',
@@ -156,13 +187,17 @@ def main():
     else:
         level = logging.INFO
     logging.basicConfig(level=level,
-        format='%(asctime)s %(levelname)s: %(message)s')
+        format='%(levelname)-10s %(message)s')
     logging.getLogger('requests').setLevel(logging.ERROR)
     # main
     if not args.command:
         parser.print_help()
     else:
-        run(**args.__dict__)
+        try:
+            run(**args.__dict__)
+        except Exception, e:
+            log.error(e)
+            sys.exit(1)
 
 if __name__=='__main__':
     main()
