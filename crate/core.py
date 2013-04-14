@@ -297,21 +297,24 @@ def destroy(name=None, **kwargs):
     log.info('{0} destroyed'.format(name))
 
 @task
-def forward_port(name=None, port=None, **kwargs):
+def forward_port(name=None, port=None, host_port=None, **kwargs):
     """
     Forwards a host port to a container port
 
     :param name: Name of container
     :param port: Port on container
+    :param host_port: Host port
 
     """
-    # find open port on host
-    while True:
-        dport = random.randint(10000, 50000)
-        out = sudo('netstat -lnt | awk \'$6 == "LISTEN" && $4 ~ ".{0}"\''.format(
-            dport))
-        if out == '':
-            break
+    dport = host_port
+    if not host_port:
+        # find open port on host
+        while True:
+            dport = random.randint(10000, 50000)
+            out = sudo('netstat -lnt | awk \'$6 == "LISTEN" && $4 ~ ".{0}"\''.format(
+                dport))
+            if out == '':
+                break
     # get ip of container
     container_ip = get_lxc_ip(name)
     with hide('stdout'):

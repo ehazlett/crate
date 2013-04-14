@@ -149,6 +149,8 @@ def main():
         help='Container name')
     forward_port_parser.add_argument('-p', '--port', action='store',
         help='Container port')
+    forward_port_parser.add_argument('-r', '--host-port', action='store',
+        help='Host port for NAT')
 
     list_ports_parser = subs.add_parser('list-ports', description='')
     list_ports_parser.add_argument('-n', '--name', action='store',
