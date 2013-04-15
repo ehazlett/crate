@@ -1,4 +1,4 @@
-from fabric.api import run, sudo, task, get, put, open_shell
+from fabric.api import run, sudo, task, get, put, open_shell, execute
 from fabric.context_managers import cd, hide
 from datetime import date
 import os
@@ -11,6 +11,8 @@ import logging
 
 # TODO: parse lxc config to get path
 LXC_PATH = '/var/lib/lxc'
+# this script returns the lxc guest IP
+# (from Canonical -- see file header for more)
 LXC_IP_LINK = 'https://gist.github.com/ehazlett/5274446/raw/070f8a77f7f5738ee2d855a1b94e2e9a23d770c6/gistfile1.txt'
 
 log = logging.getLogger('core')
@@ -230,13 +232,35 @@ def import_container(name=None, local_path=None, **kwargs):
     sudo('rm -f {0}'.format(tmp_file))
     log.info('Imported {0} successfully...'.format(name))
 
+def get_instances():
+    """
+    Returns dict of instances and state
+
+    """
+    with hide('stdout'):
+        o = sudo('lxc-list')
+    instances = {}
+    state = None
+    for l in o.splitlines():
+        if l.find('RUNNING') > -1:
+            state = 'running'
+        elif l.find('FROZEN') > -1:
+            state = 'frozen'
+        elif l.find('STOPPED') > -1:
+            state = 'stopped'
+        elif l.strip() != '':
+            instances[l.strip()] = state
+    return instances
+
 @task
-def list(**args):
+def list_instances(**args):
     """
     List all Containers
 
     """
-    sudo('lxc-list')
+    instances = get_instances()
+    for k,v in instances.iteritems():
+        log.info('{0}: {1}'.format(k, v))
 
 @task
 def start(name=None, ephemeral=False, **kwargs):
@@ -328,6 +352,23 @@ def forward_port(name=None, port=None, host_port=None, **kwargs):
         sudo('iptables-save > /etc/crate.iptables')
     log.info('Service available on host port {0}'.format(dport))
 
+def get_container_ports(name=None):
+    if not name:
+        raise StandardError('You must specify a name')
+    # get ip of container
+    container_ip = get_lxc_ip(name)
+    # only show tcp to prevent duplicates for udp
+    cur = sudo('iptables -L -t nat | grep {0} | grep tcp'.format(container_ip),
+        warn_only=True, quiet=True)
+    ports = {}
+    if cur:
+        for l in cur.splitlines():
+            if l:
+                dport = cur.split()[-2].split(':')[1]
+                target = cur.split()[-1].split(':')[-1]
+                ports[dport] = target
+    return ports
+
 @task
 def list_ports(name=None, **kwargs):
     """
@@ -336,19 +377,11 @@ def list_ports(name=None, **kwargs):
     :param name: Name of container
 
     """
-    # get ip of container
-    container_ip = get_lxc_ip(name)
-    # only show tcp to prevent duplicates for udp
-    cur = sudo('iptables -L -t nat | grep {0} | grep tcp'.format(container_ip),
-        warn_only=True, quiet=True)
-    if cur:
-        for l in cur.splitlines():
-            if l:
-                dport = cur.split()[-2].split(':')[1]
-                target = cur.split()[-1].split(':')[-1]
-                log.info('Port: {0} Target: {1}'.format(dport, target))
-    else:
-        log.info('No port forwards for {0}'.format(name))
+    if not name:
+        raise StandardError('You must specify a name')
+    ports = get_container_ports(name)
+    for k,v in ports.iteritems():
+        log.info('Port: {0} Target: {1}'.format(k,v))
 
 @task
 def remove_port(name=None, port=None, **kwargs):
@@ -359,6 +392,8 @@ def remove_port(name=None, port=None, **kwargs):
     :param port: Port on container
 
     """
+    if not name:
+        raise StandardError('You must specify a name')
     # get ip of container
     container_ip = get_lxc_ip(name)
     cur = sudo('iptables -L -t nat | grep {0}'.format(container_ip),
@@ -387,12 +422,17 @@ def set_memory_limit(name=None, memory=256, **kwargs):
     if not name:
         raise StandardError('You must specify a name')
     mem = (int(memory) * 1048576) # convert from MB to Bytes
-    log.info('Setting {0} memory limit to {1}MB'.format(name, memory))
+    # error happens when trying to assign to 0 ; set to very high limit
+    if mem == 0:
+        mem = int(1048576**3)
+        memory = 'unlimited'
+    else:
+        memory = '{0}MB'.format(memory)
+    log.info('Setting {0} memory limit to {1}'.format(name, memory))
     with hide('stdout'):
         sudo('lxc-cgroup -n {0} memory.limit_in_bytes {1}'.format(name, mem))
 
-@task
-def get_memory_limit(name=None, **kwargs):
+def get_memory_limit(name=None):
     """
     Gets memory limit for a Container
 
@@ -404,11 +444,25 @@ def get_memory_limit(name=None, **kwargs):
     with hide('stdout'):
         out = sudo('lxc-cgroup -n {0} memory.limit_in_bytes'.format(name))
     mem = (int(out) / 1048576) # convert from bytes to MB
-    if mem > 1048576 * 1048576:
+    if mem >= 1048576 * 1048576:
+        mem = 0
+    return mem
+
+@task
+def show_memory_limit(name=None, **kwargs):
+    """
+    Shows memory limit for a Container
+
+    :param name: Name of container
+
+    """
+    mem = get_memory_limit(name)
+    if mem == 0:
         limit = 'Unlimited'
     else:
         limit = '{0}MB'.format(mem)
     log.info('Memory limit for {0}: {1}'.format(name, limit))
+    return limit
 
 @task
 def set_cpu_limit(name=None, percent=100, **kwargs):
@@ -427,8 +481,16 @@ def set_cpu_limit(name=None, percent=100, **kwargs):
     with hide('stdout'):
         sudo('lxc-cgroup -n {0} cpu.shares {1}'.format(name, ratio))
 
+def get_cpu_limit(name=None):
+    if not name:
+        raise StandardError('You must specify a name')
+    with hide('stdout'):
+        out = sudo('lxc-cgroup -n {0} cpu.shares'.format(name))
+    limit = int((float(int(out)) / float(1024)) * 100)  # convert to percent
+    return limit
+
 @task
-def get_cpu_limit(name=None, **kwargs):
+def show_cpu_limit(name=None, **kwargs):
     """
     Gets CPU limit for a Container
 
@@ -437,7 +499,36 @@ def get_cpu_limit(name=None, **kwargs):
     """
     if not name:
         raise StandardError('You must specify a name')
-    with hide('stdout'):
-        out = sudo('lxc-cgroup -n {0} cpu.shares'.format(name))
-    limit = int((float(int(out)) / float(1024)) * 100)  # convert to percent
+    limit = get_cpu_limit(name)
     log.info('CPU limit for {0}: {1}%'.format(name, limit))
+    return limit
+
+@task
+def info(**kwargs):
+    """
+    Shows current LXC info
+
+    """
+    instances = get_instances()
+    for k,v in instances.iteritems():
+        name = k
+        state = v
+        cpu = 'n/a'
+        mem = 'n/a'
+        ports = 'n/a'
+        if state == 'running':
+            with hide('stdout'):
+                cpu = '{0}%'.format(get_cpu_limit(name))
+                mem = get_memory_limit(name)
+                c_ports = get_container_ports(name)
+                if c_ports:
+                    ports = ''
+                for k,v in c_ports.iteritems():
+                    ports += '{0}->{1} '.format(k,v)
+                if mem == 0:
+                    #mem = u"\u221E".encode('utf8')
+                    mem = 'unlimited'
+                else:
+                    mem = '{0}M'.format(mem)
+        log.info('{0:20} State: {1:8} CPU: {2:<4} RAM: {3:<15} Ports: {4}'.format(
+            name, state, cpu, mem, ports))

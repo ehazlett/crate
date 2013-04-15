@@ -10,7 +10,8 @@ import sys
 import core
 
 fabric.state.output['running'] = False
-env.output_prefix = False
+if not env.parallel:
+    env.output_prefix = False
 # set logging levels
 logging.getLogger('paramiko').setLevel(logging.ERROR)
 logging.getLogger('ssh').setLevel(logging.ERROR)
@@ -41,8 +42,9 @@ def run(**kwargs):
     # commands
     commands = {
         'create': core.create,
-        'list': core.list,
+        'list': core.list_instances,
         'start': core.start,
+        'info': core.info,
         'console': core.console,
         'stop': core.stop,
         'destroy': core.destroy,
@@ -53,9 +55,9 @@ def run(**kwargs):
         'list-ports': core.list_ports,
         'remove-port': core.remove_port,
         'set-memory-limit': core.set_memory_limit,
-        'get-memory-limit': core.get_memory_limit,
+        'get-memory-limit': core.show_memory_limit,
         'set-cpu-limit': core.set_cpu_limit,
-        'get-cpu-limit': core.get_cpu_limit,
+        'get-cpu-limit': core.show_cpu_limit,
         'list-base-containers': show_base_containers,
     }
     if cmd in commands:
@@ -83,6 +85,10 @@ def main():
         description='Show Base Containers')
     list_base_containers_parser.add_argument('--all', action='store_true',
         default=True, help='Show all base containers')
+
+    info_parser = subs.add_parser('info', description='')
+    info_parser.add_argument('--all', action='store_true', default=True,
+        help='Show container info')
 
 
     create_parser = subs.add_parser('create', description='')
