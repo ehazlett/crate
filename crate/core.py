@@ -260,7 +260,7 @@ def list_instances(**args):
     """
     instances = get_instances()
     for k,v in instances.iteritems():
-        log.info('{0}: {1}'.format(k, v))
+        log.info('{0:15} {1}'.format(k, v))
 
 @task
 def start(name=None, ephemeral=False, **kwargs):
