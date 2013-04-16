@@ -20,6 +20,7 @@ log = logging.getLogger('core')
 CONTAINERS = {
     'apache2': containers.apache2.get_script,
     'core': containers.core.get_script,
+    'elasticsearch': containers.elasticsearch.get_script,
     'graphite': containers.graphite.get_script,
     'graylog2': containers.graylog2.get_script,
     'haproxy': containers.haproxy.get_script,
@@ -114,7 +115,7 @@ def create(name=None, distro='ubuntu-cloud', release='', arch='',
         # change ubuntu password since ubuntu-cloud has no password
         # therefore console doesn't work
         if password:
-            log.debug('Setting password...')
+            log.debug('Setting password')
             sudo(r"sed -i '2s/^/echo ubuntu:{0} | chpasswd \n/' {1}".format(
                 password, tmp_file))
         cmd += ' -u {0}'.format(tmp_file)
@@ -135,7 +136,7 @@ def create(name=None, distro='ubuntu-cloud', release='', arch='',
         cmd += ' -u {0}'.format(tmp_file)
     # check for public key
     if public_key:
-        log.debug('Using custom SSH key...')
+        log.debug('Using custom SSH key')
         if public_key.startswith('http'):
             tfile = tempfile.mktemp()
             with open(tfile, 'w') as f:
@@ -150,7 +151,7 @@ def create(name=None, distro='ubuntu-cloud', release='', arch='',
         put(public_key, tmp_file)
         tmp_files.append(tmp_file)
         cmd += ' -S {0}'.format(tmp_file)
-    log.debug('Building...')
+    log.info('Building')
     with hide('stdout',):
         sudo(cmd)
     # cleanup
