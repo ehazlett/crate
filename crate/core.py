@@ -150,6 +150,7 @@ def create(name=None, distro='ubuntu-cloud', release='', arch='',
         put(public_key, tmp_file)
         tmp_files.append(tmp_file)
         cmd += ' -S {0}'.format(tmp_file)
+    log.debug('Building...')
     with hide('stdout',):
         sudo(cmd)
     # cleanup
