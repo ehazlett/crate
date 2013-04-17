@@ -1,4 +1,4 @@
-from fabric.api import run, sudo, task, get, put, open_shell, execute
+from fabric.api import run, sudo, task, get, put, open_shell, execute, env
 from fabric.context_managers import cd, hide
 from datetime import date
 import os
@@ -16,6 +16,7 @@ LXC_PATH = '/var/lib/lxc'
 LXC_IP_LINK = 'https://gist.github.com/ehazlett/5274446/raw/070f8a77f7f5738ee2d855a1b94e2e9a23d770c6/gistfile1.txt'
 
 log = logging.getLogger('core')
+#env.parallel = True
 
 CONTAINERS = {
     'apache2': containers.apache2.get_script,
@@ -234,7 +235,7 @@ def import_container(name=None, local_path=None, **kwargs):
     sudo('rm -f {0}'.format(tmp_file))
     log.info('Imported {0} successfully...'.format(name))
 
-def get_instances():
+def get_instances(name=None):
     """
     Returns dict of instances and state
 
@@ -251,7 +252,8 @@ def get_instances():
         elif l.find('STOPPED') > -1:
             state = 'stopped'
         elif l.strip() != '':
-            instances[l.strip()] = state
+            if not name or name and l.strip() == name:
+                instances[l.strip()] = state
     return instances
 
 @task
@@ -262,7 +264,7 @@ def list_instances(**args):
     """
     instances = get_instances()
     for k,v in instances.iteritems():
-        log.info('{0:15} {1}'.format(k, v))
+        log.info('{0:20} {1}'.format(k, v))
 
 @task
 def start(name=None, ephemeral=False, **kwargs):
@@ -506,12 +508,12 @@ def show_cpu_limit(name=None, **kwargs):
     return limit
 
 @task
-def info(**kwargs):
+def info(name=None, **kwargs):
     """
     Shows current LXC info
 
     """
-    instances = get_instances()
+    instances = get_instances(name)
     for k,v in instances.iteritems():
         name = k
         state = v
@@ -532,5 +534,5 @@ def info(**kwargs):
                     mem = 'unlimited'
                 else:
                     mem = '{0}M'.format(mem)
-        log.info('{0:20} State: {1:8} CPU: {2:<4} RAM: {3:<15} Ports: {4}'.format(
+        log.info('{0:20} State: {1:8} CPU: {2:<4} RAM: {3:<12} Ports: {4}'.format(
             name, state, cpu, mem, ports))

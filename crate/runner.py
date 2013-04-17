@@ -16,7 +16,6 @@ if not env.parallel:
 logging.getLogger('paramiko').setLevel(logging.ERROR)
 logging.getLogger('ssh').setLevel(logging.ERROR)
 
-
 def show_base_containers(**kwargs):
     c = core.CONTAINERS.keys()
     c.sort()
@@ -87,6 +86,8 @@ def main():
         default=True, help='Show all base containers')
 
     info_parser = subs.add_parser('info', description='')
+    info_parser.add_argument('-n', '--name', action='store',
+        help='Container name')
     info_parser.add_argument('--all', action='store_true', default=True,
         help='Show container info')
 
