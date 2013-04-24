@@ -9,6 +9,7 @@ def get_script():
     """
     tmpl = base.get_script()
     tmpl += """
+echo "Provisioning in progress..." > /etc/motd.tail
 install_core_packages
 install_puppet
 

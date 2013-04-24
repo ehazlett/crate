@@ -16,7 +16,6 @@ LXC_PATH = '/var/lib/lxc'
 LXC_IP_LINK = 'https://gist.github.com/ehazlett/5274446/raw/070f8a77f7f5738ee2d855a1b94e2e9a23d770c6/gistfile1.txt'
 
 log = logging.getLogger('core')
-#env.parallel = True
 
 CONTAINERS = {
     'apache2': containers.apache2.get_script,
@@ -31,6 +30,7 @@ CONTAINERS = {
     'nginx': containers.nginx.get_script,
     'openresty': containers.openresty.get_script,
     'postgres': containers.postgres.get_script,
+    'post_run': containers.post_run.get_script,
     'puppetdb': containers.puppetdb.get_script,
     'puppetmaster': containers.puppetmaster.get_script,
     'puppetdashboard': containers.puppetdashboard.get_script,
@@ -96,6 +96,7 @@ def create(name=None, distro='ubuntu-cloud', release='', arch='',
             with open(user_data_file, 'w') as f:
                 for c in base_containers:
                     f.write(CONTAINERS[c]())
+                f.write(CONTAINERS['post_run']())
         else:
             # check for remote file
             if user_data_file.startswith('http'):
