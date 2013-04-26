@@ -1,5 +1,3 @@
-from fabric.api import run, sudo, task, get, put, open_shell, execute, env
-from fabric.context_managers import cd, hide
 from datetime import date
 import os
 import tempfile
@@ -8,6 +6,10 @@ import string
 import containers
 import requests
 import logging
+from redis import Redis
+from subprocess import check_output, STDOUT, CalledProcessError
+import platform
+import simplejson as json
 
 # TODO: parse lxc config to get path
 LXC_PATH = '/var/lib/lxc'
@@ -42,6 +44,9 @@ CONTAINERS = {
     'uwsgi': containers.uwsgi.get_script,
 }
 
+def _run_command(cmd=None):
+    return check_output(cmd, stderr=STDOUT, shell=True)
+
 def get_lxc_ip(name=None):
     # get lxc-ip script if doesn't exist
     out = run('test -e /usr/local/bin/lxc-ip', quiet=True,
@@ -54,7 +59,7 @@ def get_lxc_ip(name=None):
         out = sudo('/usr/local/bin/lxc-ip -n {0}'.format(name))
     return out
 
-@task
+#@task
 def create(name=None, distro='ubuntu-cloud', release='', arch='',
     user_data_file=None, base_containers=None, public_key=None,
     password=None, **kwargs):
@@ -160,7 +165,7 @@ def create(name=None, distro='ubuntu-cloud', release='', arch='',
     sudo('rm -rf {0}'.format(' '.join(tmp_files)))
     log.info('{0} created'.format(name))
 
-@task
+#@task
 def clone(name=None, source=None, size=2, **kwargs):
     """
     Creates a new Container
@@ -177,7 +182,7 @@ def clone(name=None, source=None, size=2, **kwargs):
         sudo('lxc-clone -o {0} -n {1} -s {2}G'.format(source, name, size))
     log.info('{0} created'.format(name))
 
-@task
+#@task
 def export_container(name=None, **kwargs):
     """
     Exports (tarball) specified container
@@ -197,7 +202,7 @@ def export_container(name=None, **kwargs):
     get(tmp_file, export_name)
     sudo('rm -f {0}'.format(tmp_file))
 
-@task
+#@task
 def import_container(name=None, local_path=None, **kwargs):
     """
     Imports a container from an export
@@ -236,28 +241,7 @@ def import_container(name=None, local_path=None, **kwargs):
     sudo('rm -f {0}'.format(tmp_file))
     log.info('Imported {0} successfully...'.format(name))
 
-def get_instances(name=None):
-    """
-    Returns dict of instances and state
-
-    """
-    with hide('stdout'):
-        o = sudo('lxc-list')
-    instances = {}
-    state = None
-    for l in o.splitlines():
-        if l.find('RUNNING') > -1:
-            state = 'running'
-        elif l.find('FROZEN') > -1:
-            state = 'frozen'
-        elif l.find('STOPPED') > -1:
-            state = 'stopped'
-        elif l.strip() != '':
-            if not name or name and l.strip() == name:
-                instances[l.strip()] = state
-    return instances
-
-@task
+#@task
 def list_instances(**args):
     """
     List all Containers
@@ -267,7 +251,7 @@ def list_instances(**args):
     for k,v in instances.iteritems():
         log.info('{0:20} {1}'.format(k, v))
 
-@task
+#@task
 def start(name=None, ephemeral=False, **kwargs):
     """
     Starts a Container
@@ -285,7 +269,7 @@ def start(name=None, ephemeral=False, **kwargs):
         sudo('nohup {0} -d > /dev/null 2>&1'.format(cmd))
     log.info('{0} started'.format(name))
 
-@task
+#@task
 def console(name=None, **kwargs):
     """
     Connects to Container console
@@ -297,7 +281,7 @@ def console(name=None, **kwargs):
         raise StandardError('You must specify a name')
     open_shell('sudo lxc-console -e b -n {0} ; exit'.format(name))
 
-@task
+#@task
 def stop(name=None, **kwargs):
     """
     Stops a Container
@@ -311,7 +295,7 @@ def stop(name=None, **kwargs):
         sudo('lxc-stop -n {0}'.format(name))
     log.info('{0} stopped'.format(name))
 
-@task
+#@task
 def destroy(name=None, **kwargs):
     """
     Destroys a Container
@@ -325,7 +309,7 @@ def destroy(name=None, **kwargs):
         sudo('lxc-destroy -n {0} -f'.format(name))
     log.info('{0} destroyed'.format(name))
 
-@task
+#@task
 def forward_port(name=None, port=None, host_port=None, **kwargs):
     """
     Forwards a host port to a container port
@@ -374,7 +358,7 @@ def get_container_ports(name=None):
                 ports[dport] = target
     return ports
 
-@task
+#@task
 def list_ports(name=None, **kwargs):
     """
     Removes a container port forward
@@ -388,7 +372,7 @@ def list_ports(name=None, **kwargs):
     for k,v in ports.iteritems():
         log.info('Port: {0} Target: {1}'.format(k,v))
 
-@task
+#@task
 def remove_port(name=None, port=None, **kwargs):
     """
     Removes a container port forward
@@ -415,7 +399,7 @@ def remove_port(name=None, port=None, **kwargs):
         sudo('iptables-save > /etc/crate.iptables')
         log.info('Forward for port {0} removed'.format(port))
 
-@task
+#@task
 def set_memory_limit(name=None, memory=256, **kwargs):
     """
     Sets memory limit for a Container
@@ -437,23 +421,7 @@ def set_memory_limit(name=None, memory=256, **kwargs):
     with hide('stdout'):
         sudo('lxc-cgroup -n {0} memory.limit_in_bytes {1}'.format(name, mem))
 
-def get_memory_limit(name=None):
-    """
-    Gets memory limit for a Container
-
-    :param name: Name of container
-
-    """
-    if not name:
-        raise StandardError('You must specify a name')
-    with hide('stdout'):
-        out = sudo('lxc-cgroup -n {0} memory.limit_in_bytes'.format(name))
-    mem = (int(out) / 1048576) # convert from bytes to MB
-    if mem >= 1048576 * 1048576:
-        mem = 0
-    return mem
-
-@task
+#@task
 def show_memory_limit(name=None, **kwargs):
     """
     Shows memory limit for a Container
@@ -469,7 +437,7 @@ def show_memory_limit(name=None, **kwargs):
     log.info('Memory limit for {0}: {1}'.format(name, limit))
     return limit
 
-@task
+#@task
 def set_cpu_limit(name=None, percent=100, **kwargs):
     """
     Sets cpu limit for a Container
@@ -486,15 +454,7 @@ def set_cpu_limit(name=None, percent=100, **kwargs):
     with hide('stdout'):
         sudo('lxc-cgroup -n {0} cpu.shares {1}'.format(name, ratio))
 
-def get_cpu_limit(name=None):
-    if not name:
-        raise StandardError('You must specify a name')
-    with hide('stdout'):
-        out = sudo('lxc-cgroup -n {0} cpu.shares'.format(name))
-    limit = int((float(int(out)) / float(1024)) * 100)  # convert to percent
-    return limit
-
-@task
+#@task
 def show_cpu_limit(name=None, **kwargs):
     """
     Gets CPU limit for a Container
@@ -508,7 +468,7 @@ def show_cpu_limit(name=None, **kwargs):
     log.info('CPU limit for {0}: {1}%'.format(name, limit))
     return limit
 
-@task
+#@task
 def info(name=None, **kwargs):
     """
     Shows current LXC info
@@ -537,3 +497,113 @@ def info(name=None, **kwargs):
                     mem = '{0}M'.format(mem)
         log.info('{0:20} State: {1:8} CPU: {2:<4} RAM: {3:<12} Ports: {4}'.format(
             name, state, cpu, mem, ports))
+
+def node_listen(redis_client=None, channel=None):
+    pubsub = redis_client.pubsub()
+    pubsub.subscribe(channel)
+    for msg in pubsub.listen():
+        node_handle(msg, redis_client, channel)
+
+def publish(data=None, action=None, msg_id=None, redis_client=None,
+    channel=None):
+    resp_data = {}
+    resp_data['response'] = data
+    resp_data['node'] = platform.node()
+    resp_data['action'] = action
+    resp_data['target'] = 'master'
+    resp_data['id'] = msg_id
+    redis_client.publish(channel, json.dumps(resp_data))
+
+def node_handle(msg, redis_client=None, channel=None):
+    if msg.get('type') == 'message':
+        try:
+            msg_data = json.loads(msg.get('data'))
+            if msg_data.get('target') != 'node':
+                return
+            log.debug(msg)
+            handlers = {
+                'get_containers': get_containers,
+            }
+            cmd = msg_data.get('action')
+            if cmd in handlers.keys():
+                resp_data = handlers[cmd]()
+                print(resp_data)
+                publish(resp_data, cmd, msg_data.get('id'),
+                    redis_client, channel)
+        except Exception, e:
+            import traceback
+            traceback.print_exc()
+            log.warning('Error parsing message: {0}'.format(e))
+
+def start_node(**kwargs):
+    log.info('Starting Crate Node')
+    host = kwargs.get('redis_host')
+    port = kwargs.get('redis_port')
+    db = kwargs.get('redis_db')
+    password = kwargs.get('redis_password')
+    channel = kwargs.get('channel')
+    rds = Redis(host=host, port=port, db=db, password=password)
+    try:
+        node_listen(rds, channel)
+    except KeyboardInterrupt:
+        log.info('Shutting down')
+
+def get_containers(name=None):
+    """
+    Returns dict of instances and state
+
+    """
+    o = _run_command('lxc-list')
+    instances = {}
+    state = None
+    for l in o.splitlines():
+        if l.find('RUNNING') > -1:
+            state = 'running'
+        elif l.find('FROZEN') > -1:
+            state = 'frozen'
+        elif l.find('STOPPED') > -1:
+            state = 'stopped'
+        elif l.strip() != '':
+            if not name or name and l.strip() == name:
+                instance_name = l.strip()
+                info = {}
+                info['state'] = state
+                info['cpu'] = get_cpu_limit(instance_name)
+                info['memory'] = get_memory_limit(instance_name)
+                instances[instance_name] = info
+    return instances
+
+def get_cpu_limit(name=None):
+    """
+    Gets cpu limit for a Container
+
+    :param name: Name of container
+
+    """
+    if not name:
+        raise StandardError('You must specify a name')
+    try:
+        out = _run_command('lxc-cgroup -n {0} cpu.shares'.format(name))
+        limit = int((float(int(out)) / float(1024)) * 100)  # convert to percent
+    except CalledProcessError:
+        limit = 0
+    return limit
+
+def get_memory_limit(name=None):
+    """
+    Gets memory limit for a Container
+
+    :param name: Name of container
+
+    """
+    if not name:
+        raise StandardError('You must specify a name')
+    try:
+        out = _run_command('lxc-cgroup -n {0} memory.limit_in_bytes'.format(name))
+        mem = (int(out) / 1048576) # convert from bytes to MB
+        if mem >= 1048576 * 1048576:
+            mem = 0
+    except CalledProcessError:
+        mem = 0
+    return mem
+

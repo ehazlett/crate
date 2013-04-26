@@ -2,16 +2,11 @@
 # Copyright (c) 2013 Evan Hazlett
 #
 from argparse import ArgumentParser
-from fabric.api import execute, env
-import fabric.state
 import logging
 import os
 import sys
 import core
 
-fabric.state.output['running'] = False
-if not env.parallel:
-    env.output_prefix = False
 # set logging levels
 logging.getLogger('paramiko').setLevel(logging.ERROR)
 logging.getLogger('ssh').setLevel(logging.ERROR)
@@ -24,8 +19,6 @@ def show_base_containers(**kwargs):
 def run(**kwargs):
     log = logging.getLogger('main')
     cmd = kwargs.get('command')
-    env.user = kwargs.get('user')
-    env.key_filename = kwargs.get('key_filename')
     # convert to list
     hosts = kwargs.get('hosts', '').split(',')
     kwargs['hosts'] = hosts
@@ -58,19 +51,14 @@ def run(**kwargs):
         'set-cpu-limit': core.set_cpu_limit,
         'get-cpu-limit': core.show_cpu_limit,
         'list-base-containers': show_base_containers,
+        'node': core.start_node,
     }
     if cmd in commands:
-        execute(commands[cmd], **kwargs)
+        commands[cmd](**kwargs)
 
 def main():
     log = logging.getLogger('main')
     parser = ArgumentParser('crate')
-    parser.add_argument('-H', '--hosts', dest='hosts', required=True,
-        default='127.0.0.1', help='Hosts (comma separated)')
-    parser.add_argument('-i', '--key', dest='key_filename',
-        help='SSH private key')
-    parser.add_argument('-u', '--user', dest='user',
-        help='SSH user')
     parser.add_argument('--debug', dest='debug', action='store_true',
         default=False, help='Show Debug')
 
@@ -188,6 +176,20 @@ def main():
         help='Container name')
     set_cpu_parser.add_argument('-p', '--percent', action='store',
         help='Container CPU limit (in percent)')
+
+    node_parser = subs.add_parser('node', description='')
+    node_parser.add_argument('-s', '--start', action='store_true',
+        default=False, help='Start LXC Create node')
+    node_parser.add_argument('--redis-host', action='store',
+        default='localhost', help='Crate API Redis Host')
+    node_parser.add_argument('--redis-port',  action='store',
+        type=int, default=6379, help='Crate API Redis Port')
+    node_parser.add_argument('--redis-db',  action='store',
+        type=int, default=0, help='Crate API Redis DB')
+    node_parser.add_argument('--redis-password', action='store',
+        default=None, help='Crate API Redis Password')
+    node_parser.add_argument('--channel', action='store',
+        default='crate', help='Crate API channel')
 
     args = parser.parse_args()
     # set log level
