@@ -8,6 +8,8 @@ import logging
 import os
 import sys
 import core
+import ssh
+ssh.io_sleep = 0.1
 
 fabric.state.output['running'] = False
 if not env.parallel:

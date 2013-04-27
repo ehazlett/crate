@@ -1,5 +1,6 @@
 from fabric.api import run, sudo, task, get, put, open_shell, execute, env
-from fabric.context_managers import cd, hide
+from fabric.context_managers import cd, hide, settings
+from fabric.exceptions import CommandTimeout
 from datetime import date
 import os
 import tempfile
@@ -13,7 +14,8 @@ import logging
 LXC_PATH = '/var/lib/lxc'
 # this script returns the lxc guest IP
 # (from Canonical -- see file header for more)
-LXC_IP_LINK = 'https://gist.github.com/ehazlett/5274446/raw/070f8a77f7f5738ee2d855a1b94e2e9a23d770c6/gistfile1.txt'
+LXC_IP_LINK = 'https://gist.github.com/ehazlett/5274446/raw/'\
+'5ccb1eebe0f499c4e8ecc45599413527e4f715e8/gistfile1.txt'
 
 log = logging.getLogger('core')
 
@@ -51,7 +53,10 @@ def get_lxc_ip(name=None):
             sudo('wget {0} -O /usr/local/bin/lxc-ip ; chmod +x /usr/local/bin/lxc-ip'.format(
                 LXC_IP_LINK))
     with hide('stdout'):
-        out = sudo('/usr/local/bin/lxc-ip -n {0}'.format(name))
+        try:
+            out = sudo('/usr/local/bin/lxc-ip -n {0}'.format(name), timeout=1)
+        except CommandTimeout:
+            out = ''
     return out
 
 @task
@@ -174,7 +179,7 @@ def clone(name=None, source=None, size=2, **kwargs):
         raise StandardError('You must specify a name and source')
     log.info('Cloning {0} to {1}'.format(source, name))
     with hide('stdout',):
-        sudo('lxc-clone -o {0} -n {1} -s {2}G'.format(source, name, size))
+        sudo('lxc-clone -o {0} -n {1} -L {2}G'.format(source, name, size))
     log.info('{0} created'.format(name))
 
 @task
@@ -252,9 +257,13 @@ def get_instances(name=None):
         stopped = conts[0]
         running = conts[1]
         for i in stopped.split():
-            instances[i.strip()] = 'stopped'
+            instance_name = i.strip()
+            if not name or name and instance_name == name:
+                instances[instance_name] = 'stopped'
         for i in running.split():
-            instances[i.strip()] = 'running'
+            instance_name = i.strip()
+            if not name or name and instance_name == name:
+                instances[instance_name] = 'running'
     return instances
 
 @task
@@ -327,6 +336,10 @@ def destroy(name=None, **kwargs):
     """
     if not name:
         raise StandardError('You must specify a name')
+    ports = get_container_ports(name)
+    if ports:
+        for k,v in ports.iteritems():
+            execute(remove_port, name, v)
     with hide('stdout',):
         sudo('lxc-destroy -n {0} -f'.format(name))
     log.info('{0} destroyed'.format(name))
@@ -368,9 +381,11 @@ def get_container_ports(name=None):
         raise StandardError('You must specify a name')
     # get ip of container
     container_ip = get_lxc_ip(name)
-    # only show tcp to prevent duplicates for udp
-    cur = sudo('iptables -L -t nat | grep {0} | grep tcp'.format(container_ip),
-        warn_only=True, quiet=True)
+    cur = None
+    if container_ip:
+        # only show tcp to prevent duplicates for udp
+        cur = sudo('iptables -L -t nat | grep {0} | grep tcp'.format(container_ip),
+            warn_only=True, quiet=True, timeout=1)
     ports = {}
     if cur:
         for l in cur.splitlines():
@@ -452,9 +467,12 @@ def get_memory_limit(name=None):
     """
     if not name:
         raise StandardError('You must specify a name')
-    with hide('stdout'):
+    with hide('stdout', 'warnings'), settings(warn_only=True):
         out = sudo('lxc-cgroup -n {0} memory.limit_in_bytes'.format(name))
-    mem = (int(out) / 1048576) # convert from bytes to MB
+    try:
+        mem = (int(out) / 1048576) # convert from bytes to MB
+    except:
+        mem = 0
     if mem >= 1048576 * 1048576:
         mem = 0
     return mem
@@ -495,9 +513,12 @@ def set_cpu_limit(name=None, percent=100, **kwargs):
 def get_cpu_limit(name=None):
     if not name:
         raise StandardError('You must specify a name')
-    with hide('stdout'):
+    with hide('stdout', 'warnings'), settings(warn_only=True):
         out = sudo('lxc-cgroup -n {0} cpu.shares'.format(name))
-    limit = int((float(int(out)) / float(1024)) * 100)  # convert to percent
+    try:
+        limit = int((float(int(out)) / float(1024)) * 100)  # convert to percent
+    except:
+        limit = 0
     return limit
 
 @task
