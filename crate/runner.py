@@ -30,6 +30,7 @@ def run(**kwargs):
     hosts = kwargs.get('hosts', '').split(',')
     kwargs['hosts'] = hosts
     cnt = kwargs.get('base_containers')
+    environment = kwargs.get('environment')
     ssh_key = kwargs.get('public_key')
     password = kwargs.get('password')
     if cmd == 'create':
@@ -38,6 +39,8 @@ def run(**kwargs):
             sys.exit(1)
     if cnt:
         kwargs['base_containers'] = kwargs.get('base_containers','').split(',')
+    if environment:
+        kwargs['environment'] = environment.split(',')
     # commands
     commands = {
         'create': core.create,
@@ -120,6 +123,8 @@ def main():
         help='Container name')
     start_parser.add_argument('--ephemeral', action='store_true', default=False,
         help='Start ephemeral container')
+    start_parser.add_argument('-e', '--environment', action='store',
+        help='Container environment variables (comma separated KEY=VALUE pairs')
 
     console_parser = subs.add_parser('console', description='')
     console_parser.add_argument('-n', '--name', action='store',

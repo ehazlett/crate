@@ -242,19 +242,19 @@ def get_instances(name=None):
 
     """
     with hide('stdout'):
-        o = sudo('lxc-list')
+        o = sudo('lxc-ls')
     instances = {}
-    state = None
-    for l in o.splitlines():
-        if l.find('RUNNING') > -1:
-            state = 'running'
-        elif l.find('FROZEN') > -1:
-            state = 'frozen'
-        elif l.find('STOPPED') > -1:
-            state = 'stopped'
-        elif l.strip() != '':
-            if not name or name and l.strip() == name:
-                instances[l.strip()] = state
+    if o.strip() != '':
+        conts = o.split('\n')
+        # HACK: 'fill' for parsing
+        if len(conts) == 1:
+            conts.append('')
+        stopped = conts[0]
+        running = conts[1]
+        for i in stopped.split():
+            instances[i.strip()] = 'stopped'
+        for i in running.split():
+            instances[i.strip()] = 'running'
     return instances
 
 @task
@@ -268,12 +268,13 @@ def list_instances(**args):
         log.info('{0:20} {1}'.format(k, v))
 
 @task
-def start(name=None, ephemeral=False, **kwargs):
+def start(name=None, ephemeral=False, environment=None, **kwargs):
     """
     Starts a Container
 
     :param name: Name of container
     :param ephemeral: Disregard changes after stop (default: False)
+    :param environment: Environment variables (list of KEY=VALUE strings)
 
     """
     if not name:
@@ -283,6 +284,11 @@ def start(name=None, ephemeral=False, **kwargs):
         cmd = 'lxc-start-ephemeral -o {0}'.format(name)
     with hide('stdout',):
         sudo('nohup {0} -d > /dev/null 2>&1'.format(cmd))
+    if environment:
+        with cd(os.path.join(LXC_PATH, name)), hide('stdout'):
+            env = '\n'.join(environment)
+            sudo('echo \"{0}\" > ./rootfs/etc/profile.d/crate.sh'.format(
+                env))
     log.info('{0} started'.format(name))
 
 @task
