@@ -296,7 +296,7 @@ def start(name=None, ephemeral=False, environment=None, **kwargs):
     if environment:
         with cd(os.path.join(LXC_PATH, name)), hide('stdout'):
             env = '\n'.join(environment)
-            sudo('echo \"{0}\" > ./rootfs/etc/profile.d/crate.sh'.format(
+            sudo('echo \"{0}\" >> ./rootfs/etc/environment'.format(
                 env))
     log.info('{0} started'.format(name))
 
@@ -564,3 +564,17 @@ def info(name=None, **kwargs):
                     mem = '{0}M'.format(mem)
         log.info('{0:20} State: {1:8} CPU: {2:<4} RAM: {3:<12} Ports: {4}'.format(
             name, state, cpu, mem, ports))
+
+@task
+def container_log(name=None, **kwargs):
+    """
+    Shows log for LXC boot
+
+    :param name: Name of container
+
+    """
+    try:
+        sudo('if [ -e /tmp/{0}.lxc.console ]; then ' \
+            'tail -f /tmp/{0}.lxc.console; fi'.format(name))
+    except KeyboardInterrupt:
+        pass

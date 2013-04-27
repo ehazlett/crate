@@ -19,7 +19,9 @@ logging.getLogger('paramiko').setLevel(logging.ERROR)
 logging.getLogger('ssh').setLevel(logging.ERROR)
 
 def show_base_containers(**kwargs):
+    excludes = ['post_run']
     c = core.CONTAINERS.keys()
+    [c.remove(x) for x in excludes]
     c.sort()
     print('\n'.join(c))
 
@@ -48,6 +50,7 @@ def run(**kwargs):
         'create': core.create,
         'list': core.list_instances,
         'start': core.start,
+        'log': core.container_log,
         'info': core.info,
         'console': core.console,
         'stop': core.stop,
@@ -127,6 +130,10 @@ def main():
         help='Start ephemeral container')
     start_parser.add_argument('-e', '--environment', action='store',
         help='Container environment variables (comma separated KEY=VALUE pairs')
+
+    log_parser = subs.add_parser('log', description='')
+    log_parser.add_argument('-n', '--name', action='store',
+        help='Container name')
 
     console_parser = subs.add_parser('console', description='')
     console_parser.add_argument('-n', '--name', action='store',
