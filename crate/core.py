@@ -7,9 +7,10 @@ import containers
 import requests
 import logging
 from redis import Redis
-from subprocess import check_output, STDOUT, CalledProcessError
+import subprocess
 import platform
 import simplejson as json
+import re
 
 # TODO: parse lxc config to get path
 LXC_PATH = '/var/lib/lxc'
@@ -45,19 +46,18 @@ CONTAINERS = {
 }
 
 def _run_command(cmd=None):
-    return check_output(cmd, stderr=STDOUT, shell=True)
+    p = subprocess.Popen([cmd], stdout=subprocess.PIPE,
+        shell=True)
+    out, err = p.communicate()
+    return out
 
 def get_lxc_ip(name=None):
     # get lxc-ip script if doesn't exist
-    out = run('test -e /usr/local/bin/lxc-ip', quiet=True,
-        warn_only=True)
-    if out.return_code != 0:
-        with hide('stdout'):
-            sudo('wget {0} -O /usr/local/bin/lxc-ip ; chmod +x /usr/local/bin/lxc-ip'.format(
+    if not os.path.exists('/usr/local/bin/lxc-ip'):
+            _run_command('wget {0} -O /usr/local/bin/lxc-ip ; chmod +x /usr/local/bin/lxc-ip'.format(
                 LXC_IP_LINK))
-    with hide('stdout'):
-        out = sudo('/usr/local/bin/lxc-ip -n {0}'.format(name))
-    return out
+    out = _run_command('/usr/local/bin/lxc-ip -n {0}'.format(name))
+    return out.strip()
 
 #@task
 def create(name=None, distro='ubuntu-cloud', release='', arch='',
@@ -251,7 +251,6 @@ def list_instances(**args):
     for k,v in instances.iteritems():
         log.info('{0:20} {1}'.format(k, v))
 
-#@task
 def start(name=None, ephemeral=False, **kwargs):
     """
     Starts a Container
@@ -265,8 +264,7 @@ def start(name=None, ephemeral=False, **kwargs):
     cmd = 'lxc-start -n {0} -c /tmp/{0}.lxc.console'.format(name)
     if ephemeral:
         cmd = 'lxc-start-ephemeral -o {0}'.format(name)
-    with hide('stdout',):
-        sudo('nohup {0} -d > /dev/null 2>&1'.format(cmd))
+    _run_command('{0} -d > /dev/null 2>&1'.format(cmd))
     log.info('{0} started'.format(name))
 
 #@task
@@ -281,7 +279,6 @@ def console(name=None, **kwargs):
         raise StandardError('You must specify a name')
     open_shell('sudo lxc-console -e b -n {0} ; exit'.format(name))
 
-#@task
 def stop(name=None, **kwargs):
     """
     Stops a Container
@@ -291,11 +288,9 @@ def stop(name=None, **kwargs):
     """
     if not name:
         raise StandardError('You must specify a name')
-    with hide('stdout',):
-        sudo('lxc-stop -n {0}'.format(name))
+    _run_command('lxc-stop -n {0}'.format(name))
     log.info('{0} stopped'.format(name))
 
-#@task
 def destroy(name=None, **kwargs):
     """
     Destroys a Container
@@ -305,11 +300,9 @@ def destroy(name=None, **kwargs):
     """
     if not name:
         raise StandardError('You must specify a name')
-    with hide('stdout',):
-        sudo('lxc-destroy -n {0} -f'.format(name))
+    _run_command('lxc-destroy -n {0} -f'.format(name))
     log.info('{0} destroyed'.format(name))
 
-#@task
 def forward_port(name=None, port=None, host_port=None, **kwargs):
     """
     Forwards a host port to a container port
@@ -324,21 +317,20 @@ def forward_port(name=None, port=None, host_port=None, **kwargs):
         # find open port on host
         while True:
             dport = random.randint(10000, 50000)
-            out = sudo('netstat -lnt | awk \'$6 == "LISTEN" && $4 ~ ".{0}"\''.format(
+            out = _run_command('netstat -lnt | awk \'$6 == "LISTEN" && $4 ~ ".{0}"\''.format(
                 dport))
             if out == '':
                 break
     # get ip of container
     container_ip = get_lxc_ip(name)
-    with hide('stdout'):
-        sudo('iptables -t nat -A PREROUTING -p tcp --dport {0} ' \
-            '-j DNAT --to-destination {1}:{2}'.format(dport, container_ip,
-            port))
-        sudo('iptables -t nat -A PREROUTING -p udp --dport {0} ' \
-            '-j DNAT --to-destination {1}:{2}'.format(dport, container_ip,
-            port))
-        # save rules
-        sudo('iptables-save > /etc/crate.iptables')
+    _run_command('iptables -t nat -A PREROUTING -p tcp --dport {0} ' \
+        '-j DNAT --to-destination {1}:{2}'.format(dport, container_ip,
+        port))
+    _run_command('iptables -t nat -A PREROUTING -p udp --dport {0} ' \
+        '-j DNAT --to-destination {1}:{2}'.format(dport, container_ip,
+        port))
+    # save rules
+    _run_command('iptables-save > /etc/crate.iptables')
     log.info('Service available on host port {0}'.format(dport))
 
 def get_container_ports(name=None):
@@ -347,8 +339,8 @@ def get_container_ports(name=None):
     # get ip of container
     container_ip = get_lxc_ip(name)
     # only show tcp to prevent duplicates for udp
-    cur = sudo('iptables -L -t nat | grep {0} | grep tcp'.format(container_ip),
-        warn_only=True, quiet=True)
+    cur = _run_command('iptables -L -t nat | grep {0} | grep tcp'.format(
+        container_ip))
     ports = {}
     if cur:
         for l in cur.splitlines():
@@ -521,13 +513,16 @@ def node_handle(msg, redis_client=None, channel=None):
             if msg_data.get('target') != 'node':
                 return
             log.debug(msg)
+            data = msg_data.get('data')
             handlers = {
                 'get_containers': get_containers,
+                'start_container': start,
+                'stop_container': stop,
+                'destroy_container': destroy,
             }
             cmd = msg_data.get('action')
             if cmd in handlers.keys():
-                resp_data = handlers[cmd]()
-                print(resp_data)
+                resp_data = handlers[cmd](**data)
                 publish(resp_data, cmd, msg_data.get('id'),
                     redis_client, channel)
         except Exception, e:
@@ -550,27 +545,38 @@ def start_node(**kwargs):
 
 def get_containers(name=None):
     """
-    Returns dict of instances and state
+    Returns instances and state
 
     """
-    o = _run_command('lxc-list')
-    instances = {}
-    state = None
-    for l in o.splitlines():
-        if l.find('RUNNING') > -1:
-            state = 'running'
-        elif l.find('FROZEN') > -1:
-            state = 'frozen'
-        elif l.find('STOPPED') > -1:
-            state = 'stopped'
-        elif l.strip() != '':
-            if not name or name and l.strip() == name:
-                instance_name = l.strip()
+    o = _run_command('lxc-ls')
+    instances = []
+    if o.strip() != '':
+        conts = o.split()
+        for i in set(conts):
+            instance_name = i.strip()
+            if instance_name and not name or name and instance_name == name:
                 info = {}
+                info['name'] = instance_name
+                ports = []
+                cpu = 0
+                mem = 0
+                state = 'stopped'
+                # check if running by looking for rootfs.hold (since lxc-ls
+                #   output is ridiculous
+                cgroup_path = '/sys/fs/cgroup/cpu/lxc'
+                cgroup_container_path = '/sys/fs/cgroup/cpu/lxc/{0}'.format(
+                    instance_name)
+                if os.path.exists(cgroup_path) and os.path.exists(
+                    cgroup_container_path):
+                    state = 'running'
+                    cpu = get_cpu_limit(instance_name)
+                    mem = get_memory_limit(instance_name)
+                    ports = get_container_ports(instance_name)
                 info['state'] = state
-                info['cpu'] = get_cpu_limit(instance_name)
-                info['memory'] = get_memory_limit(instance_name)
-                instances[instance_name] = info
+                info['cpu'] = cpu
+                info['memory'] = mem
+                info['ports'] = ports
+                instances.append(info)
     return instances
 
 def get_cpu_limit(name=None):
@@ -585,7 +591,7 @@ def get_cpu_limit(name=None):
     try:
         out = _run_command('lxc-cgroup -n {0} cpu.shares'.format(name))
         limit = int((float(int(out)) / float(1024)) * 100)  # convert to percent
-    except CalledProcessError:
+    except:
         limit = 0
     return limit
 
@@ -603,7 +609,7 @@ def get_memory_limit(name=None):
         mem = (int(out) / 1048576) # convert from bytes to MB
         if mem >= 1048576 * 1048576:
             mem = 0
-    except CalledProcessError:
+    except:
         mem = 0
     return mem
 
