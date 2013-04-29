@@ -154,23 +154,6 @@ def create(name=None, distro='ubuntu-cloud', release='', arch='',
     log.info('{0} created'.format(name))
 
 #@task
-def clone(name=None, source=None, size=2, **kwargs):
-    """
-    Creates a new Container
-
-    :param name: Name of new container
-    :param source: Name of source container
-    :param size: Size of new container (in GB, default: 2)
-
-    """
-    if not name or not source:
-        raise StandardError('You must specify a name and source')
-    log.info('Cloning {0} to {1}'.format(source, name))
-    with hide('stdout',):
-        sudo('lxc-clone -o {0} -n {1} -s {2}G'.format(source, name, size))
-    log.info('{0} created'.format(name))
-
-#@task
 def export_container(name=None, **kwargs):
     """
     Exports (tarball) specified container
@@ -419,6 +402,7 @@ def node_handle(msg, redis_client=None, channel=None):
                 'destroy_container': destroy,
                 'create_container': create,
                 'update_container': update_container,
+                'clone_container': clone,
             }
             cmd = msg_data.get('action')
             if cmd in handlers.keys():
@@ -637,3 +621,19 @@ def update_container(name=None, cpu=None, memory=None, ports=None, **kwargs):
             isinstance(ports, list) and port not in ports]
         [remove_port(name, port) for port in existing_ports if \
             isinstance(ports, dict) and port not in ports.values()]
+
+def clone(name=None, source=None, size=2, **kwargs):
+    """
+    Creates a new Container
+
+    :param name: Name of new container
+    :param source: Name of source container
+    :param size: Size of new container (in GB, default: 2)
+
+    """
+    if not name or not source:
+        raise StandardError('You must specify a name and source')
+    log.info('Cloning {0} to {1}'.format(source, name))
+    _run_command('lxc-clone -o {0} -n {1} -s {2}G'.format(source, name, size))
+    log.info('{0} created'.format(name))
+
