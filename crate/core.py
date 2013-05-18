@@ -45,18 +45,8 @@ CONTAINERS = {
 }
 
 def get_lxc_ip(name=None):
-    # get lxc-ip script if doesn't exist
-    out = run('test -e /usr/local/bin/lxc-ip', quiet=True,
-        warn_only=True)
-    if out.return_code != 0:
-        with hide('stdout'):
-            sudo('wget {0} -O /usr/local/bin/lxc-ip ; chmod +x /usr/local/bin/lxc-ip'.format(
-                LXC_IP_LINK))
     with hide('stdout'):
-        try:
-            out = sudo('/usr/local/bin/lxc-ip -n {0}'.format(name), timeout=1)
-        except CommandTimeout:
-            out = ''
+        out = sudo('lxc-ls --fancy --fancy-format ipv4 ^{0} | tail -1'.format(name), timeout=1)
     return out
 
 @task
@@ -83,10 +73,10 @@ def create(name=None, distro='ubuntu-cloud', release='', arch='',
     log.debug('Creating container {0}: Distro: {1} Version: {2}'.format(name,
         distro or 'default', release or 'default'))
     cmd = 'lxc-create -n {0} -t {1}'.format(name, distro)
-    if arch:
-        cmd += ' -a {0}'.format(arch)
     # everything below is for template options
     cmd += ' --'
+    if arch:
+        cmd += ' -a {0}'.format(arch)
     if release:
         cmd += ' -r {0}'.format(release)
     tmp_files = []
@@ -133,7 +123,7 @@ def create(name=None, distro='ubuntu-cloud', release='', arch='',
             scr = '#!/bin/sh\necho ubuntu:{0} | chpasswd \n'.format(
                 password)
             f.write(scr)
-        # create remote user data file for use with lxc-create to 
+        # create remote user data file for use with lxc-create to
         # change password
         tmp_file = os.path.join('/tmp',
             ''.join(random.sample(string.letters, 5)))
@@ -247,23 +237,13 @@ def get_instances(name=None):
 
     """
     with hide('stdout'):
-        o = sudo('lxc-ls')
+        o = sudo('lxc-ls --fancy --fancy-format name,state')
     instances = {}
     if o.strip() != '':
-        conts = o.split('\n')
-        # HACK: 'fill' for parsing
-        if len(conts) == 1:
-            conts.append('')
-        stopped = conts[0]
-        running = conts[1]
-        for i in stopped.split():
-            instance_name = i.strip()
-            if not name or name and instance_name == name:
-                instances[instance_name] = 'stopped'
-        for i in running.split():
-            instance_name = i.strip()
-            if not name or name and instance_name == name:
-                instances[instance_name] = 'running'
+        conts = o.split('\n')[2:]
+        for l in conts:
+            name, state = l.split()
+            instances[name] = state.lower()
     return instances
 
 @task

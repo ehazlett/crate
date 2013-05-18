@@ -2,7 +2,6 @@
 *.sw*
 *.un*
 local_config.py
-config_local.json
 *.log
 newrelic.ini
 *.egg-info/*

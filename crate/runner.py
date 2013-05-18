@@ -11,6 +11,17 @@ import core
 import ssh
 ssh.io_sleep = 0.1
 
+# load host defs
+try:
+    import json
+    cfg = os.path.expanduser('~/.crate.conf')
+    if os.path.exists(cfg):
+        with open(cfg, 'r') as f:
+            c = json.loads(f.read())
+            env.roledefs = c
+except ImportError:
+    print('Error loading config ({0})'.format(cfg))
+
 fabric.state.output['running'] = False
 if not env.parallel:
     env.output_prefix = False
@@ -30,6 +41,7 @@ def run(**kwargs):
     cmd = kwargs.get('command')
     env.user = kwargs.get('user')
     env.key_filename = kwargs.get('key_filename')
+    roles = kwargs.get('roles', None)
     # convert to list
     hosts = kwargs.get('hosts', '').split(',')
     kwargs['hosts'] = hosts
@@ -73,8 +85,8 @@ def run(**kwargs):
 def main():
     log = logging.getLogger('main')
     parser = ArgumentParser('crate')
-    parser.add_argument('-H', '--hosts', dest='hosts', required=True,
-        default='127.0.0.1', help='Hosts (comma separated)')
+    parser.add_argument('-H', '--hosts', dest='hosts', required=False,
+        default='', help='Hosts (comma separated)')
     parser.add_argument('-i', '--key', dest='key_filename',
         help='SSH private key')
     parser.add_argument('-u', '--user', dest='user',
@@ -98,7 +110,6 @@ def main():
         help='Container name')
     info_parser.add_argument('--all', action='store_true', default=True,
         help='Show container info')
-
 
     create_parser = subs.add_parser('create', description='')
     create_parser.add_argument('-n', '--name', action='store',
