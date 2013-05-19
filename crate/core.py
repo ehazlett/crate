@@ -370,8 +370,8 @@ def get_container_ports(name=None):
     if cur:
         for l in cur.splitlines():
             if l:
-                dport = cur.split()[-2].split(':')[1]
-                target = cur.split()[-1].split(':')[-1]
+                dport = l.split()[-2].split(':')[1]
+                target = l.split()[-1].split(':')[-1]
                 ports[dport] = target
     return ports
 
@@ -534,9 +534,11 @@ def info(name=None, **kwargs):
                 mem = get_memory_limit(name)
                 c_ports = get_container_ports(name)
                 if c_ports:
-                    ports = ''
-                for k,v in c_ports.iteritems():
-                    ports += '{0}->{1} '.format(k,v)
+                    ports = []
+                    for k,v in c_ports.iteritems():
+                        if k and v:
+                            ports.append('{0}->{1}'.format(k,v))
+                    ports = ', '.join(ports)
                 if mem == 0:
                     #mem = u"\u221E".encode('utf8')
                     mem = 'unlimited'
