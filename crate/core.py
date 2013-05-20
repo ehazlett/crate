@@ -402,19 +402,19 @@ def remove_port(name=None, port=None, **kwargs):
         raise StandardError('You must specify a name')
     # get ip of container
     container_ip = get_lxc_ip(name)
-    cur = sudo('iptables -L -t nat | grep {0}'.format(container_ip),
-        warn_only=True, quiet=True)
-    if cur:
-        dport = cur.split()[-2].split(':')[1]
-        sudo('iptables -t nat -D PREROUTING -p tcp --dport {0} ' \
-            '-j DNAT --to-destination {1}:{2}'.format(dport, container_ip,
-            port), warn_only=True, quiet=True)
-        sudo('iptables -t nat -D PREROUTING -p udp --dport {0} ' \
-            '-j DNAT --to-destination {1}:{2}'.format(dport, container_ip,
-            port), warn_only=True, quiet=True)
-        # save rules
-        sudo('iptables-save > /etc/crate.iptables')
-        log.info('Forward for port {0} removed'.format(port))
+    #cur = sudo('iptables -L -t nat | grep {0}'.format(container_ip),
+    #    warn_only=True, quiet=True)
+    while True:
+        cur = sudo('iptables -t nat -L PREROUTING --line-numbers | grep {0}:{1}'.format(
+            container_ip, port), warn_only=True, quiet=True)
+        if cur:
+            # can only remove one line at a time because rule numbers change
+            rules = cur.splitlines()
+            r = rules[0].split()[0]
+            sudo('iptables -t nat -D PREROUTING {0}'.format(r))
+        else:
+            break
+    log.info('Forward for port {0} removed'.format(port))
 
 @task
 def set_memory_limit(name=None, memory=256, **kwargs):
