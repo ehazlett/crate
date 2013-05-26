@@ -364,7 +364,7 @@ def get_container_ports(name=None):
     cur = None
     if container_ip and container_ip != '-': # hack for lxc return '-' for no ip
         # only show tcp to prevent duplicates for udp
-        cur = sudo('iptables -L -t nat | grep {0} | grep tcp'.format(container_ip),
+        cur = sudo('iptables -L PREROUTING -t nat | grep {0} | grep tcp'.format(container_ip),
             warn_only=True, quiet=True, timeout=1)
     ports = {}
     if cur:
