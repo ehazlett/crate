@@ -46,7 +46,7 @@ CONTAINERS = {
 
 def get_lxc_ip(name=None):
     with hide('stdout'):
-        out = sudo('lxc-ls --fancy --fancy-format ipv4 ^{0} | tail -1'.format(name), timeout=1)
+        out = sudo('lxc-ls --fancy --fancy-format ipv4 ^{0}$ | tail -1'.format(name), timeout=1)
     return out
 
 @task
@@ -257,13 +257,16 @@ def list_instances(**args):
         log.info('{0:20} {1}'.format(k, v))
 
 @task
-def start(name=None, ephemeral=False, environment=None, **kwargs):
+def start(name=None, ephemeral=False, environment=None, daemonize=True,
+    command=None, **kwargs):
     """
     Starts a Container
 
     :param name: Name of container
     :param ephemeral: Disregard changes after stop (default: False)
     :param environment: Environment variables (list of KEY=VALUE strings)
+    :param daemonize: Run as a daemon (default: True)
+    :param command: Command to run (optional)
 
     """
     if not name:
@@ -271,8 +274,12 @@ def start(name=None, ephemeral=False, environment=None, **kwargs):
     cmd = 'lxc-start -n {0} -c /tmp/{0}.lxc.console'.format(name)
     if ephemeral:
         cmd = 'lxc-start-ephemeral -o {0}'.format(name)
+    if daemonize:
+        cmd += ' -d'
+    if command:
+        cmd += ' -- {0}'.format(command)
     with hide('stdout',):
-        sudo('nohup {0} -d > /dev/null 2>&1'.format(cmd))
+        sudo('nohup {0} > /dev/null 2>&1'.format(cmd))
     if environment:
         with cd(os.path.join(LXC_PATH, name)), hide('stdout'):
             env = '\n'.join(environment)

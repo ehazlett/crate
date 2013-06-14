@@ -38,7 +38,7 @@ def show_base_containers(**kwargs):
 
 def run(**kwargs):
     log = logging.getLogger('main')
-    cmd = kwargs.get('command')
+    action = kwargs.get('action')
     env.user = kwargs.get('user')
     env.key_filename = kwargs.get('key_filename')
     roles = kwargs.get('roles', None)
@@ -49,7 +49,7 @@ def run(**kwargs):
     environment = kwargs.get('environment')
     ssh_key = kwargs.get('public_key')
     password = kwargs.get('password')
-    if cmd == 'create':
+    if action == 'create':
         if not ssh_key and not password:
             log.error('You must specify an SSH public key or password')
             sys.exit(1)
@@ -57,8 +57,8 @@ def run(**kwargs):
         kwargs['base_containers'] = kwargs.get('base_containers','').split(',')
     if environment:
         kwargs['environment'] = environment.split(',')
-    # commands
-    commands = {
+    # actions
+    actions = {
         'create': core.create,
         'list': core.list_instances,
         'start': core.start,
@@ -79,8 +79,8 @@ def run(**kwargs):
         'get-cpu-limit': core.show_cpu_limit,
         'list-base-containers': show_base_containers,
     }
-    if cmd in commands:
-        execute(commands[cmd], **kwargs)
+    if action in actions:
+        execute(actions[action], **kwargs)
 
 def main():
     log = logging.getLogger('main')
@@ -94,7 +94,7 @@ def main():
     parser.add_argument('--debug', dest='debug', action='store_true',
         default=False, help='Show Debug')
 
-    subs = parser.add_subparsers(dest='command')
+    subs = parser.add_subparsers(dest='action')
 
     list_parser = subs.add_parser('list', description='')
     list_parser.add_argument('--all', action='store_true', default=True,
@@ -141,6 +141,10 @@ def main():
         help='Start ephemeral container')
     start_parser.add_argument('-e', '--environment', action='store',
         help='Container environment variables (comma separated KEY=VALUE pairs')
+    start_parser.add_argument('-c', '--command', action='store',
+        help='Command to run (optional)')
+    start_parser.add_argument('--no-daemonize', action='store_false',
+        default=True, help='Run in the foreground')
 
     log_parser = subs.add_parser('log', description='')
     log_parser.add_argument('-n', '--name', action='store',
@@ -224,7 +228,7 @@ def main():
         format='%(levelname)-10s %(message)s')
     logging.getLogger('requests').setLevel(logging.ERROR)
     # main
-    if not args.command:
+    if not args.action:
         parser.print_help()
     else:
         try:
